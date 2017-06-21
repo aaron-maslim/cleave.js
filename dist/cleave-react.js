@@ -211,9 +211,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // hit backspace when last character is delimiter
 	        if (charCode === 8 && Util.isDelimiter(pps.result.slice(-1), pps.delimiter, pps.delimiters)) {
 	            pps.backspace = true;
-	        } else {
-	            pps.backspace = false;
-	        }
+	        } // hit backspace when last character is postfix
+	        else if (charCode === 8 && Util.isPostfix(pps.result.slice(-1), pps.postfix)) {
+	                pps.backspace = true;
+	            } else {
+	                pps.backspace = false;
+	            }
 
 	        owner.registeredEvents.onKeyDown(event);
 	    },
@@ -271,19 +274,33 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // numeral formatter
 	        if (pps.numeral) {
-	            var current_value = value;
+
+	            if (pps.backspace && !Util.isPostfix(value.slice(-1), pps.postfix)) {
+	                value = Util.headStr(value, value.length - 1);
+	            }
+
+	            var rawValue = value;
+	            if (pps.rawValueTrimPrefix) {
+	                rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+	            }
+	            if (pps.rawValueTrimPostfix) {
+	                rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
+	            }
+	            rawValue = pps.numeralFormatter.getRawValue(rawValue);
+
 	            if (pps.min_value !== undefined && pps.min_value !== null) {
-	                if (parseFloat(current_value) < parseFloat(pps.min_value)) {
-	                    current_value = pps.min_value;
+	                if (parseFloat(rawValue) <= parseFloat(pps.min_value)) {
+	                    value = pps.min_value;
 	                }
 	            }
 	            if (pps.max_value !== undefined && pps.max_value !== null) {
-	                if (parseFloat(current_value) > parseFloat(pps.max_value)) {
-	                    current_value = pps.max_value;
+	                if (parseFloat(rawValue) >= parseFloat(pps.max_value)) {
+	                    value = pps.max_value;
 	                }
 	            }
-	            pps.result = pps.prefix + pps.numeralFormatter.format(String(current_value)) + pps.postfix;
-	            if (!value || value === '') {
+
+	            pps.result = pps.prefix + pps.numeralFormatter.format(String(value), parseFloat(rawValue) >= parseFloat(pps.max_value)) + pps.postfix;
+	            if (!rawValue || rawValue === '') {
 	                pps.result = '';
 	            }
 	            owner.updateValueState();
@@ -313,26 +330,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        value = pps.lowercase ? value.toLowerCase() : value;
 
 	        // prefix
-	        if (pps.prefix) {
+	        if (pps.prefix || pps.postfix) {
 	            if (value) {
-	                value = pps.prefix + value;
-	            } else {
-	                value = '';
-	            }
-
-	            // no blocks specified, no need to do formatting
-	            if (pps.blocksLength === 0) {
-	                pps.result = value;
-	                owner.updateValueState();
-
-	                return;
-	            }
-	        }
-
-	        // postfix
-	        if (pps.postfix) {
-	            if (value) {
-	                value = value + pps.postfix;
+	                value = pps.prefix + value + pps.postfix;
 	            } else {
 	                value = '';
 	            }
@@ -1866,7 +1866,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return value.replace(this.delimiterRE, '').replace(this.numeralDecimalMark, '.');
 	    },
 
-	    format: function format(value) {
+	    format: function format(value, hideDecimal) {
 	        var owner = this,
 	            parts,
 	            partInteger,
@@ -1919,7 +1919,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	                partInteger = partInteger.replace(/(\d)(?=(\d{3})+$)/g, '$1' + owner.delimiter);
 	        }
 
-	        return partInteger.toString() + (owner.numeralDecimalScale > 0 ? partDecimal.toString() : '');
+	        if (!hideDecimal) {
+	            return partInteger.toString() + (owner.numeralDecimalScale > 0 ? partDecimal.toString() : '');
+	        } else {
+	            return partInteger.toString();
+	        }
 	    }
 	};
 
@@ -2263,11 +2267,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    getPostfixStrippedValue: function getPostfixStrippedValue(value, postfix, postfixLength) {
 	        if (value.slice(-postfixLength) !== postfix) {
 	            var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
-
-	            value = postfix + value.slice(diffIndex, diffIndex + 1) + value.slice(-postfixLength + 1);
+	            if (value.slice(-(diffIndex + postfixLength + 1), -(diffIndex + 1)) === postfix) {
+	                value = value.slice(0, -(diffIndex + postfixLength + 1)) + value.slice(-(diffIndex + 1)) + postfix;
+	            } else {
+	                value = value.slice(0, -(diffIndex + postfixLength)) + value.slice(-(diffIndex + 1)) + postfix;
+	            }
 	        }
 
-	        return value.slice(postfixLength);
+	        return value.slice(0, -postfixLength);
+	    },
+
+	    isPostfix: function isPostfix(letter, postfix) {
+	        return letter === postfix;
 	    },
 
 	    getFirstDiffIndex: function getFirstDiffIndex(prev, current) {

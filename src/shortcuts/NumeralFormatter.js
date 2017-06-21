@@ -26,7 +26,7 @@ NumeralFormatter.prototype = {
         return value.replace(this.delimiterRE, '').replace(this.numeralDecimalMark, '.');
     },
 
-    format: function (value) {
+    format: function (value, hideDecimal) {
         var owner = this, parts, partInteger, partDecimal = '';
 
         // strip alphabet letters
@@ -76,7 +76,11 @@ NumeralFormatter.prototype = {
             partInteger = partInteger.replace(/(\d)(?=(\d{3})+$)/g, '$1' + owner.delimiter);
         }
 
-        return partInteger.toString() + (owner.numeralDecimalScale > 0 ? partDecimal.toString() : '');
+        if (!hideDecimal) {
+            return partInteger.toString() + (owner.numeralDecimalScale > 0 ? partDecimal.toString() : '');
+        } else {
+            return partInteger.toString();
+        }
     }
 };
 

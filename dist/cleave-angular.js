@@ -476,7 +476,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return value.replace(this.delimiterRE, '').replace(this.numeralDecimalMark, '.');
 	    },
 
-	    format: function (value) {
+	    format: function (value, hideDecimal) {
 	        var owner = this, parts, partInteger, partDecimal = '';
 
 	        // strip alphabet letters
@@ -526,7 +526,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            partInteger = partInteger.replace(/(\d)(?=(\d{3})+$)/g, '$1' + owner.delimiter);
 	        }
 
-	        return partInteger.toString() + (owner.numeralDecimalScale > 0 ? partDecimal.toString() : '');
+	        if (!hideDecimal) {
+	            return partInteger.toString() + (owner.numeralDecimalScale > 0 ? partDecimal.toString() : '');
+	        } else {
+	            return partInteger.toString();
+	        }
 	    }
 	};
 
@@ -875,11 +879,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    getPostfixStrippedValue: function (value, postfix, postfixLength) {
 	        if (value.slice(-postfixLength) !== postfix) {
 	            var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
-
-	            value = postfix + value.slice(diffIndex, diffIndex + 1) + value.slice(-postfixLength + 1);
+	            if (value.slice( -(diffIndex + postfixLength + 1), -(diffIndex + 1)) === postfix) {
+	                value = value.slice(0, -(diffIndex + postfixLength + 1)) + value.slice(-(diffIndex + 1)) + postfix;
+	            } else {
+	                value = value.slice(0, -(diffIndex + postfixLength)) + value.slice(-(diffIndex + 1)) + postfix;
+	            }
 	        }
 
-	        return value.slice(postfixLength);
+	        return value.slice(0, -postfixLength);
+	    },
+
+	    isPostfix: function (letter, postfix) {
+	        return letter === postfix;
 	    },
 
 	    getFirstDiffIndex: function (prev, current) {

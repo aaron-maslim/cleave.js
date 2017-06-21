@@ -65,11 +65,18 @@ var Util = {
     getPostfixStrippedValue: function (value, postfix, postfixLength) {
         if (value.slice(-postfixLength) !== postfix) {
             var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
-
-            value = postfix + value.slice(diffIndex, diffIndex + 1) + value.slice(-postfixLength + 1);
+            if (value.slice( -(diffIndex + postfixLength + 1), -(diffIndex + 1)) === postfix) {
+                value = value.slice(0, -(diffIndex + postfixLength + 1)) + value.slice(-(diffIndex + 1)) + postfix;
+            } else {
+                value = value.slice(0, -(diffIndex + postfixLength)) + value.slice(-(diffIndex + 1)) + postfix;
+            }
         }
 
-        return value.slice(postfixLength);
+        return value.slice(0, -postfixLength);
+    },
+
+    isPostfix: function (letter, postfix) {
+        return letter === postfix;
     },
 
     getFirstDiffIndex: function (prev, current) {

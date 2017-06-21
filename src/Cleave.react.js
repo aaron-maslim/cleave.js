@@ -154,6 +154,9 @@ var Cleave = CreateReactClass({
         // hit backspace when last character is delimiter
         if (charCode === 8 && Util.isDelimiter(pps.result.slice(-1), pps.delimiter, pps.delimiters)) {
             pps.backspace = true;
+        } // hit backspace when last character is postfix
+        else if (charCode === 8 && Util.isPostfix(pps.result.slice(-1), pps.postfix)) {
+            pps.backspace = true;
         } else {
             pps.backspace = false;
         }
@@ -212,19 +215,33 @@ var Cleave = CreateReactClass({
 
         // numeral formatter
         if (pps.numeral) {
-            var current_value = value;
+
+            if (pps.backspace && !Util.isPostfix(value.slice(-1), pps.postfix)) {
+                value = Util.headStr(value, value.length - 1);
+            }
+
+            var rawValue = value;
+            if (pps.rawValueTrimPrefix) {
+                rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+            }
+            if (pps.rawValueTrimPostfix) {
+                rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
+            }
+            rawValue = pps.numeralFormatter.getRawValue(rawValue);
+            
             if ( pps.min_value !== undefined && pps.min_value !== null ) {
-                if ( parseFloat(current_value) < parseFloat(pps.min_value)) {
-                    current_value = pps.min_value;
+                if ( parseFloat(rawValue) <= parseFloat(pps.min_value)) {
+                    value = pps.min_value;
                 }
             }
             if ( pps.max_value !== undefined && pps.max_value !== null ) {
-                if ( parseFloat(current_value) > parseFloat(pps.max_value)) {
-                    current_value = pps.max_value;
+                if ( parseFloat(rawValue) >= parseFloat(pps.max_value)) {
+                    value = pps.max_value;
                 }
             }
-            pps.result = pps.prefix + pps.numeralFormatter.format(String(current_value)) + pps.postfix;
-            if (!value || value === '') {
+            
+            pps.result = pps.prefix + pps.numeralFormatter.format(String(value), (parseFloat(rawValue) >= parseFloat(pps.max_value))) + pps.postfix;
+            if (!rawValue || rawValue === '') {
                 pps.result = '';
             }
             owner.updateValueState();
@@ -254,30 +271,13 @@ var Cleave = CreateReactClass({
         value = pps.lowercase ? value.toLowerCase() : value;
 
         // prefix
-        if (pps.prefix) {
+        if (pps.prefix || pps.postfix) {
             if (value) {
-                value = pps.prefix + value;
+                value = pps.prefix + value + pps.postfix;
             } else {
                 value = '';
             }
 
-            // no blocks specified, no need to do formatting
-            if (pps.blocksLength === 0) {
-                pps.result = value;
-                owner.updateValueState();
-
-                return;
-            }
-        }
-
-        // postfix
-        if (pps.postfix) {
-            if (value) {
-                value = value + pps.postfix;
-            } else {
-                value = '';
-            }
-            
             // no blocks specified, no need to do formatting
             if (pps.blocksLength === 0) {
                 pps.result = value;
