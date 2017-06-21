@@ -87,7 +87,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var owner = this, pps = owner.properties;
 
 	        // no need to use this lib
-	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix && !pps.postfix)) {
+	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
 	            return;
 	        }
 
@@ -247,10 +247,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // numeral formatter
 	        if (pps.numeral) {
-	            pps.result = pps.prefix + pps.numeralFormatter.format(value) + pps.postfix;
-	            if (!value || value === '') {
-	                pps.result = '';
-	            }
+	            pps.result = pps.prefix + pps.numeralFormatter.format(value);
 	            owner.updateValueState();
 
 	            return;
@@ -267,9 +264,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // strip prefix
 	        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
 
-	        // strip postfix
-	        value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
-
 	        // strip non-numeric characters
 	        value = pps.numericOnly ? Util.strip(value, /[^\d]/g) : value;
 
@@ -281,23 +275,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (pps.prefix) {
 	            value = pps.prefix + value;
 
-	            // no blocks specified, no need to do formatting
-	            if (pps.blocksLength === 0) {
-	                pps.result = value;
-	                owner.updateValueState();
-
-	                return;
-	            }
-	        }
-
-	        // postfix
-	        if (pps.postfix) {
-	            if (value) {
-	                value = value + pps.postfix;
-	            } else {
-	                value = '';
-	            }
-	            
 	            // no blocks specified, no need to do formatting
 	            if (pps.blocksLength === 0) {
 	                pps.result = value;
@@ -320,7 +297,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // nothing changed
 	        // prevent update value to avoid caret position change
-	        if (prev === pps.result && prev !== pps.prefix && prev !== pps.postfix) {
+	        if (prev === pps.result && prev !== pps.prefix) {
 	            return;
 	        }
 
@@ -396,10 +373,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        if (pps.rawValueTrimPrefix) {
 	            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
-	        }
-	        
-	        if (pps.rawValueTrimPostfix) {
-	            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
 	        }
 
 	        if (pps.numeral) {
