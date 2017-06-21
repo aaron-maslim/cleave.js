@@ -31,7 +31,7 @@ Cleave.prototype = {
         var owner = this, pps = owner.properties;
 
         // no need to use this lib
-        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
+        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix && !pps.postfix)) {
             return;
         }
 
@@ -191,7 +191,10 @@ Cleave.prototype = {
 
         // numeral formatter
         if (pps.numeral) {
-            pps.result = pps.prefix + pps.numeralFormatter.format(value);
+            pps.result = pps.prefix + pps.numeralFormatter.format(value) + pps.postfix;
+            if (!value || value === '') {
+                pps.result = '';
+            }
             owner.updateValueState();
 
             return;
@@ -208,6 +211,9 @@ Cleave.prototype = {
         // strip prefix
         value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
 
+        // strip postfix
+        value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
+
         // strip non-numeric characters
         value = pps.numericOnly ? Util.strip(value, /[^\d]/g) : value;
 
@@ -219,6 +225,23 @@ Cleave.prototype = {
         if (pps.prefix) {
             value = pps.prefix + value;
 
+            // no blocks specified, no need to do formatting
+            if (pps.blocksLength === 0) {
+                pps.result = value;
+                owner.updateValueState();
+
+                return;
+            }
+        }
+
+        // postfix
+        if (pps.postfix) {
+            if (value) {
+                value = value + pps.postfix;
+            } else {
+                value = '';
+            }
+            
             // no blocks specified, no need to do formatting
             if (pps.blocksLength === 0) {
                 pps.result = value;
@@ -241,7 +264,7 @@ Cleave.prototype = {
 
         // nothing changed
         // prevent update value to avoid caret position change
-        if (prev === pps.result && prev !== pps.prefix) {
+        if (prev === pps.result && prev !== pps.prefix && prev !== pps.postfix) {
             return;
         }
 
@@ -317,6 +340,10 @@ Cleave.prototype = {
 
         if (pps.rawValueTrimPrefix) {
             rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+        }
+        
+        if (pps.rawValueTrimPostfix) {
+            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
         }
 
         if (pps.numeral) {

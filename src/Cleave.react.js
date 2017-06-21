@@ -213,7 +213,7 @@ var Cleave = CreateReactClass({
         // numeral formatter
         if (pps.numeral) {
             pps.result = pps.prefix + pps.numeralFormatter.format(value) + pps.postfix;
-            if (value === '') {
+            if (!value || value === '') {
                 pps.result = '';
             }
             owner.updateValueState();

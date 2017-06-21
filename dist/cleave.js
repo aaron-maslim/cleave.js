@@ -52,7 +52,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
@@ -87,7 +87,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var owner = this, pps = owner.properties;
 
 	        // no need to use this lib
-	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
+	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix && !pps.postfix)) {
 	            return;
 	        }
 
@@ -247,7 +247,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // numeral formatter
 	        if (pps.numeral) {
-	            pps.result = pps.prefix + pps.numeralFormatter.format(value);
+	            pps.result = pps.prefix + pps.numeralFormatter.format(value) + pps.postfix;
+	            if (!value || value === '') {
+	                pps.result = '';
+	            }
 	            owner.updateValueState();
 
 	            return;
@@ -264,6 +267,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // strip prefix
 	        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
 
+	        // strip postfix
+	        value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
+
 	        // strip non-numeric characters
 	        value = pps.numericOnly ? Util.strip(value, /[^\d]/g) : value;
 
@@ -275,6 +281,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (pps.prefix) {
 	            value = pps.prefix + value;
 
+	            // no blocks specified, no need to do formatting
+	            if (pps.blocksLength === 0) {
+	                pps.result = value;
+	                owner.updateValueState();
+
+	                return;
+	            }
+	        }
+
+	        // postfix
+	        if (pps.postfix) {
+	            if (value) {
+	                value = value + pps.postfix;
+	            } else {
+	                value = '';
+	            }
+	            
 	            // no blocks specified, no need to do formatting
 	            if (pps.blocksLength === 0) {
 	                pps.result = value;
@@ -297,7 +320,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // nothing changed
 	        // prevent update value to avoid caret position change
-	        if (prev === pps.result && prev !== pps.prefix) {
+	        if (prev === pps.result && prev !== pps.prefix && prev !== pps.postfix) {
 	            return;
 	        }
 
@@ -374,6 +397,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (pps.rawValueTrimPrefix) {
 	            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
 	        }
+	        
+	        if (pps.rawValueTrimPostfix) {
+	            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
+	        }
 
 	        if (pps.numeral) {
 	            rawValue = pps.numeralFormatter.getRawValue(rawValue);
@@ -417,9 +444,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
-/***/ },
+/***/ }),
 /* 1 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -458,7 +485,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            .replace(owner.numeralDecimalMark, 'M')
 
 	            // strip non numeric letters except minus and "M"
-	            // this is to ensure prefix has been stripped
+	            // this is to ensure prefix and postfix has been stripped
 	            .replace(/[^\dM-]/g, '')
 
 	            // replace the leading minus with reserved placeholder
@@ -506,9 +533,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = NumeralFormatter;
 
 
-/***/ },
+/***/ }),
 /* 2 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -586,9 +613,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 
-/***/ },
+/***/ }),
 /* 3 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -650,9 +677,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 
-/***/ },
+/***/ }),
 /* 4 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -777,9 +804,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 
-/***/ },
+/***/ }),
 /* 5 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -843,6 +870,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 
 	        return value.slice(prefixLength);
+	    },
+
+	    getPostfixStrippedValue: function (value, postfix, postfixLength) {
+	        if (value.slice(-postfixLength) !== postfix) {
+	            var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
+
+	            value = postfix + value.slice(diffIndex, diffIndex + 1) + value.slice(-postfixLength + 1);
+	        }
+
+	        return value.slice(postfixLength);
 	    },
 
 	    getFirstDiffIndex: function (prev, current) {
@@ -910,9 +947,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Util;
 
 
-/***/ },
+/***/ }),
 /* 6 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
@@ -961,6 +998,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        target.prefixLength = target.prefix.length;
 	        target.rawValueTrimPrefix = !!opts.rawValueTrimPrefix;
 	        target.copyDelimiter = !!opts.copyDelimiter;
+	        
+	        target.postfix = (target.creditCard || target.phone || target.date) ? '' : (opts.postfix || '');
+	        target.postfixLength = target.postfix.length;
+	        target.rawValueTrimPostfix = !!opts.rawValueTrimPostfix;
 
 	        target.initValue = opts.initValue === undefined ? '' : opts.initValue.toString();
 
@@ -991,7 +1032,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
-/***/ }
+/***/ })
 /******/ ])
 });
 ;
