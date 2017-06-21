@@ -273,16 +273,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (pps.numeral) {
 	            var current_value = value;
 	            if (pps.min_value !== undefined && pps.min_value !== null) {
-	                if (current_value < pps.min_value) {
+	                if (parseFloat(current_value) < parseFloat(pps.min_value)) {
 	                    current_value = pps.min_value;
 	                }
 	            }
 	            if (pps.max_value !== undefined && pps.max_value !== null) {
-	                if (current_value > pps.max_value) {
+	                if (parseFloat(current_value) > parseFloat(pps.max_value)) {
 	                    current_value = pps.max_value;
 	                }
 	            }
-	            pps.result = pps.prefix + pps.numeralFormatter.format(current_value) + pps.postfix;
+	            pps.result = pps.prefix + pps.numeralFormatter.format(String(current_value)) + pps.postfix;
 	            if (!value || value === '') {
 	                pps.result = '';
 	            }
