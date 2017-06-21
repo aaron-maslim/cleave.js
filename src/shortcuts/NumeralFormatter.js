@@ -35,7 +35,7 @@ NumeralFormatter.prototype = {
             .replace(owner.numeralDecimalMark, 'M')
 
             // strip non numeric letters except minus and "M"
-            // this is to ensure prefix has been stripped
+            // this is to ensure prefix and postfix has been stripped
             .replace(/[^\dM-]/g, '')
 
             // replace the leading minus with reserved placeholder

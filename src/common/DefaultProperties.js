@@ -45,6 +45,10 @@ var DefaultProperties = {
         target.prefixLength = target.prefix.length;
         target.rawValueTrimPrefix = !!opts.rawValueTrimPrefix;
         target.copyDelimiter = !!opts.copyDelimiter;
+        
+        target.postfix = (target.creditCard || target.phone || target.date) ? '' : (opts.postfix || '');
+        target.postfixLength = target.postfix.length;
+        target.rawValueTrimPostfix = !!opts.rawValueTrimPostfix;
 
         target.initValue = opts.initValue === undefined ? '' : opts.initValue.toString();
 

@@ -61,7 +61,7 @@ var Cleave = CreateReactClass({
             pps = owner.properties;
 
         // so no need for this lib at all
-        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
+        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix && !pps.postfix)) {
             return;
         }
 
@@ -173,6 +173,10 @@ var Cleave = CreateReactClass({
             rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
         }
 
+        if (pps.rawValueTrimPostfix) {
+            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
+        }
+
         if (pps.numeral) {
             rawValue = pps.numeralFormatter.getRawValue(rawValue);
         } else {
@@ -208,7 +212,10 @@ var Cleave = CreateReactClass({
 
         // numeral formatter
         if (pps.numeral) {
-            pps.result = pps.prefix + pps.numeralFormatter.format(value);
+            pps.result = pps.prefix + pps.numeralFormatter.format(value) + pps.postfix;
+            if (value === '') {
+                pps.result = '';
+            }
             owner.updateValueState();
 
             return;
@@ -224,6 +231,9 @@ var Cleave = CreateReactClass({
 
         // strip prefix
         value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
+        
+        // strip postfix
+        value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
 
         // strip non-numeric characters
         value = pps.numericOnly ? Util.strip(value, /[^\d]/g) : value;
@@ -234,8 +244,29 @@ var Cleave = CreateReactClass({
 
         // prefix
         if (pps.prefix) {
-            value = pps.prefix + value;
+            if (value) {
+                value = pps.prefix + value;
+            } else {
+                value = '';
+            }
 
+            // no blocks specified, no need to do formatting
+            if (pps.blocksLength === 0) {
+                pps.result = value;
+                owner.updateValueState();
+
+                return;
+            }
+        }
+
+        // postfix
+        if (pps.postfix) {
+            if (value) {
+                value = value + pps.postfix;
+            } else {
+                value = '';
+            }
+            
             // no blocks specified, no need to do formatting
             if (pps.blocksLength === 0) {
                 pps.result = value;
@@ -258,7 +289,7 @@ var Cleave = CreateReactClass({
 
         // nothing changed
         // prevent update value to avoid caret position change
-        if (prev === pps.result && prev !== pps.prefix) {
+        if (prev === pps.result && prev !== pps.prefix && prev !== pps.postfix) {
             return;
         }
 

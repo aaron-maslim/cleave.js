@@ -62,6 +62,16 @@ var Util = {
         return value.slice(prefixLength);
     },
 
+    getPostfixStrippedValue: function (value, postfix, postfixLength) {
+        if (value.slice(-postfixLength) !== postfix) {
+            var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
+
+            value = postfix + value.slice(diffIndex, diffIndex + 1) + value.slice(-postfixLength + 1);
+        }
+
+        return value.slice(postfixLength);
+    },
+
     getFirstDiffIndex: function (prev, current) {
         var index = 0;
 
