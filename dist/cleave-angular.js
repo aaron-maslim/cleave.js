@@ -987,6 +987,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        target.numeralDecimalMark = opts.numeralDecimalMark || '.';
 	        target.numeralThousandsGroupStyle = opts.numeralThousandsGroupStyle || 'thousand';
 	        target.numeralPositiveOnly = !!opts.numeralPositiveOnly;
+	        target.min_value = opts.min_value;
+	        target.max_value = opts.max_value;
 
 	        // others
 	        target.numericOnly = target.creditCard || target.date || !!opts.numericOnly;
