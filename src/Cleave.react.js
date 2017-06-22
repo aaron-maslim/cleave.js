@@ -230,7 +230,7 @@ var Cleave = CreateReactClass({
             rawValue = pps.numeralFormatter.getRawValue(rawValue);
             
             if ( pps.min_value !== undefined && pps.min_value !== null ) {
-                if ( parseFloat(rawValue) <= parseFloat(pps.min_value)) {
+                if ( parseFloat(rawValue) < parseFloat(pps.min_value)) {
                     value = pps.min_value;
                 }
             }
