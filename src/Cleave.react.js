@@ -18,7 +18,14 @@ var Cleave = CreateReactClass({
     componentWillReceiveProps: function (nextProps) {
         var owner = this,
             phoneRegionCode = (nextProps.options || {}).phoneRegionCode,
-            newValue = nextProps.value;
+            newValue = nextProps.value,
+            { onKeyDown, onChange, onInit } = nextProps;
+        
+        owner.registeredEvents = {
+            onInit:    onInit || Util.noop,
+            onChange:  onChange || Util.noop,
+            onKeyDown: onKeyDown || Util.noop
+        };
 
         if (newValue !== undefined) {
             newValue = newValue.toString();
