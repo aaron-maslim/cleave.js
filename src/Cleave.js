@@ -32,6 +32,8 @@ Cleave.prototype = {
 
         // no need to use this lib
         if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
+            owner.onInput(pps.initValue);
+
             return;
         }
 
@@ -67,6 +69,7 @@ Cleave.prototype = {
 
         pps.numeralFormatter = new Cleave.NumeralFormatter(
             pps.numeralDecimalMark,
+            pps.numeralIntegerScale,
             pps.numeralDecimalScale,
             pps.numeralThousandsGroupStyle,
             pps.numeralPositiveOnly,
@@ -119,7 +122,7 @@ Cleave.prototype = {
         owner.lastInputValue = currentValue;
 
         // hit backspace when last character is delimiter
-        if (charCode === 8 && Util.isDelimiter(currentValue.slice(-1), pps.delimiter, pps.delimiters)) {
+        if (charCode === 8 && Util.isDelimiter(currentValue.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
             pps.backspace = true;
 
             return;
@@ -177,8 +180,8 @@ Cleave.prototype = {
         // case 2: last character is not delimiter which is:
         // 12|34* -> hit backspace -> 1|34*
         // note: no need to apply this for numeral mode
-        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-1), pps.delimiter, pps.delimiters)) {
-            value = Util.headStr(value, value.length - 1);
+        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
+            value = Util.headStr(value, value.length - pps.delimiterLength);
         }
 
         // phone formatter
@@ -207,6 +210,9 @@ Cleave.prototype = {
 
         // strip prefix
         value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
+        
+        // strip postfix
+        value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
 
         // strip non-numeric characters
         value = pps.numericOnly ? Util.strip(value, /[^\d]/g) : value;
@@ -218,6 +224,19 @@ Cleave.prototype = {
         // prefix
         if (pps.prefix) {
             value = pps.prefix + value;
+
+            // no blocks specified, no need to do formatting
+            if (pps.blocksLength === 0) {
+                pps.result = value;
+                owner.updateValueState();
+
+                return;
+            }
+        }
+
+        // postfix
+        if (pps.postfix) {
+            value = value + pps.postfix;
 
             // no blocks specified, no need to do formatting
             if (pps.blocksLength === 0) {
@@ -299,7 +318,7 @@ Cleave.prototype = {
     setRawValue: function (value) {
         var owner = this, pps = owner.properties;
 
-        value = value !== undefined ? value.toString() : '';
+        value = value !== undefined && value !== null ? value.toString() : '';
 
         if (pps.numeral) {
             value = value.replace('.', pps.numeralDecimalMark);
@@ -317,6 +336,9 @@ Cleave.prototype = {
 
         if (pps.rawValueTrimPrefix) {
             rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+        }
+        if (pps.rawValueTrimPostfix) {
+            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
         }
 
         if (pps.numeral) {

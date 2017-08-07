@@ -30,6 +30,7 @@ var DefaultProperties = {
 
         // numeral
         target.numeral = !!opts.numeral;
+        target.numeralIntegerScale = opts.numeralIntegerScale > 0 ? opts.numeralIntegerScale : 0;
         target.numeralDecimalScale = opts.numeralDecimalScale >= 0 ? opts.numeralDecimalScale : 2;
         target.numeralDecimalMark = opts.numeralDecimalMark || '.';
         target.numeralThousandsGroupStyle = opts.numeralThousandsGroupStyle || 'thousand';
@@ -52,7 +53,7 @@ var DefaultProperties = {
         target.postfixLength = target.postfix.length;
         target.rawValueTrimPostfix = !!opts.rawValueTrimPostfix;
 
-        target.initValue = opts.initValue === undefined ? '' : opts.initValue.toString();
+        target.initValue = (opts.initValue !== undefined && opts.initValue !== null) ? opts.initValue.toString() : '';
 
         target.delimiter =
             (opts.delimiter || opts.delimiter === '') ? opts.delimiter :
@@ -60,6 +61,7 @@ var DefaultProperties = {
                     (opts.numeral ? ',' :
                         (opts.phone ? ' ' :
                             ' ')));
+        target.delimiterLength = target.delimiter.length;
         target.delimiters = opts.delimiters || [];
 
         target.blocks = opts.blocks || [];

@@ -81,12 +81,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	            newValue = nextProps.value,
 	            onKeyDown = nextProps.onKeyDown,
 	            onChange = nextProps.onChange,
-	            onInit = nextProps.onInit;
+	            onInit = nextProps.onInit,
+	            onFocus = nextProps.onFocus,
+	            onBlur = nextProps.onBlur;
 
 
 	        owner.registeredEvents = {
 	            onInit: onInit || Util.noop,
 	            onChange: onChange || Util.noop,
+	            onFocus: onFocus || Util.noop,
+	            onBlur: onBlur || Util.noop,
 	            onKeyDown: onKeyDown || Util.noop
 	        };
 
@@ -114,12 +118,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	            options = _owner$props.options,
 	            onKeyDown = _owner$props.onKeyDown,
 	            onChange = _owner$props.onChange,
+	            onFocus = _owner$props.onFocus,
+	            onBlur = _owner$props.onBlur,
 	            onInit = _owner$props.onInit;
 
 
 	        owner.registeredEvents = {
 	            onInit: onInit || Util.noop,
 	            onChange: onChange || Util.noop,
+	            onFocus: onFocus || Util.noop,
+	            onBlur: onBlur || Util.noop,
 	            onKeyDown: onKeyDown || Util.noop
 	        };
 
@@ -138,6 +146,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // so no need for this lib at all
 	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && pps.blocksLength === 0 && !pps.prefix && !pps.postfix) {
+	            owner.onInput(pps.initValue);
+	            owner.registeredEvents.onInit(owner);
+
 	            return;
 	        }
 
@@ -162,7 +173,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            return;
 	        }
 
-	        pps.numeralFormatter = new NumeralFormatter(pps.numeralDecimalMark, pps.numeralDecimalScale, pps.numeralThousandsGroupStyle, pps.numeralPositiveOnly, pps.delimiter);
+	        pps.numeralFormatter = new NumeralFormatter(pps.numeralDecimalMark, pps.numeralIntegerScale, pps.numeralDecimalScale, pps.numeralThousandsGroupStyle, pps.numeralPositiveOnly, pps.delimiter);
 	    },
 
 	    initDateFormatter: function initDateFormatter() {
@@ -200,13 +211,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var owner = this,
 	            pps = owner.properties;
 
-	        value = value !== undefined ? value.toString() : '';
+	        value = value !== undefined && value !== null ? value.toString() : '';
 
 	        if (pps.numeral) {
 	            value = value.replace('.', pps.numeralDecimalMark);
 	        }
 
 	        owner.onChange({ target: { value: value } });
+	    },
+
+	    getRawValue: function getRawValue() {
+	        var owner = this,
+	            pps = owner.properties,
+	            rawValue = pps.result;
+
+	        if (pps.rawValueTrimPrefix) {
+	            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+	        }
+	        if (pps.rawValueTrimPostfix) {
+	            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
+	        }
+
+	        if (pps.numeral) {
+	            rawValue = pps.numeralFormatter.getRawValue(rawValue);
+	        } else {
+	            rawValue = Util.stripDelimiters(rawValue, pps.delimiter, pps.delimiters);
+	        }
+
+	        return rawValue;
 	    },
 
 	    onInit: function onInit(owner) {
@@ -219,7 +251,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            charCode = event.which || event.keyCode;
 
 	        // hit backspace when last character is delimiter
-	        if (charCode === 8 && Util.isDelimiter(pps.result.slice(-1), pps.delimiter, pps.delimiters)) {
+	        if (charCode === 8 && Util.isDelimiter(pps.result.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
 	            pps.backspace = true;
 	        } // hit backspace when last character is postfix
 	        else if (charCode === 8 && Util.isPostfix(pps.result.slice(-1), pps.postfix)) {
@@ -231,30 +263,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	        owner.registeredEvents.onKeyDown(event);
 	    },
 
+	    onFocus: function onFocus(event) {
+	        var owner = this,
+	            pps = owner.properties;
+
+	        event.target.rawValue = owner.getRawValue();
+	        event.target.value = pps.result;
+
+	        owner.registeredEvents.onFocus(event);
+	    },
+
+	    onBlur: function onBlur(event) {
+	        var owner = this,
+	            pps = owner.properties;
+
+	        event.target.rawValue = owner.getRawValue();
+	        event.target.value = pps.result;
+
+	        owner.registeredEvents.onBlur(event);
+	    },
+
 	    onChange: function onChange(event) {
 	        var owner = this,
-	            pps = owner.properties,
-	            rawValue;
+	            pps = owner.properties;
 
 	        owner.onInput(event.target.value);
 
-	        rawValue = pps.result;
-
-	        if (pps.rawValueTrimPrefix) {
-	            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
-	        }
-
-	        if (pps.rawValueTrimPostfix) {
-	            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
-	        }
-
-	        if (pps.numeral) {
-	            rawValue = pps.numeralFormatter.getRawValue(rawValue);
-	        } else {
-	            rawValue = Util.stripDelimiters(rawValue, pps.delimiter, pps.delimiters);
-	        }
-
-	        event.target.rawValue = rawValue;
+	        event.target.rawValue = owner.getRawValue();
 	        event.target.value = pps.result;
 
 	        owner.registeredEvents.onChange(event);
@@ -270,8 +305,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // case 2: last character is not delimiter which is:
 	        // 12|34* -> hit backspace -> 1|34*
 
-	        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-1), pps.delimiter, pps.delimiters)) {
-	            value = Util.headStr(value, value.length - 1);
+	        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
+	            value = Util.headStr(value, value.length - pps.delimiterLength);
 	        }
 
 	        // phone formatter
@@ -285,8 +320,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // numeral formatter
 	        if (pps.numeral) {
 
-	            if (pps.backspace && !Util.isPostfix(value.slice(-1), pps.postfix)) {
-	                value = Util.headStr(value, value.length - 1);
+	            if (pps.backspace && pps.postfix && !Util.isPostfix(value.slice(-1), pps.postfix)) {
+	                value = Util.headStr(value, value.length);
 	            }
 
 	            var rawValue = value;
@@ -339,7 +374,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        value = pps.uppercase ? value.toUpperCase() : value;
 	        value = pps.lowercase ? value.toLowerCase() : value;
 
-	        // prefix
+	        // prefix and postfix
 	        if (pps.prefix || pps.postfix) {
 	            if (value) {
 	                value = pps.prefix + value + pps.postfix;
@@ -355,6 +390,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                return;
 	            }
 	        }
+	        console.log("POSTFIX VALUE AFTER AFTER POSTIF", value);
 
 	        // update credit card props
 	        if (pps.creditCard) {
@@ -420,10 +456,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	            value = _owner$props2.value,
 	            options = _owner$props2.options,
 	            onKeyDown = _owner$props2.onKeyDown,
+	            onFocus = _owner$props2.onFocus,
+	            onBlur = _owner$props2.onBlur,
 	            onChange = _owner$props2.onChange,
 	            onInit = _owner$props2.onInit,
 	            htmlRef = _owner$props2.htmlRef,
-	            propsToTransfer = _objectWithoutProperties(_owner$props2, ['value', 'options', 'onKeyDown', 'onChange', 'onInit', 'htmlRef']);
+	            propsToTransfer = _objectWithoutProperties(_owner$props2, ['value', 'options', 'onKeyDown', 'onFocus', 'onBlur', 'onChange', 'onInit', 'htmlRef']);
 
 
 	        return React.createElement('input', _extends({
@@ -431,9 +469,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            ref: htmlRef,
 	            value: owner.state.value,
 	            onKeyDown: owner.onKeyDown,
-	            onChange: owner.onChange
+	            onChange: owner.onChange,
+	            onFocus: owner.onFocus,
+	            onBlur: owner.onBlur
 	        }, propsToTransfer, {
-	            'data-cleave-ignore': [value, options, onKeyDown, onChange, onInit, htmlRef]
+	            'data-cleave-ignore': [value, options, onFocus, onBlur, onKeyDown, onChange, onInit, htmlRef]
 	        }));
 	    }
 	});
@@ -1854,10 +1894,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var NumeralFormatter = function NumeralFormatter(numeralDecimalMark, numeralDecimalScale, numeralThousandsGroupStyle, numeralPositiveOnly, delimiter) {
+	var NumeralFormatter = function NumeralFormatter(numeralDecimalMark, numeralIntegerScale, numeralDecimalScale, numeralThousandsGroupStyle, numeralPositiveOnly, delimiter) {
 	    var owner = this;
 
 	    owner.numeralDecimalMark = numeralDecimalMark || '.';
+	    owner.numeralIntegerScale = numeralIntegerScale > 0 ? numeralIntegerScale : 0;
 	    owner.numeralDecimalScale = numeralDecimalScale >= 0 ? numeralDecimalScale : 2;
 	    owner.numeralThousandsGroupStyle = numeralThousandsGroupStyle || NumeralFormatter.groupStyle.thousand;
 	    owner.numeralPositiveOnly = !!numeralPositiveOnly;
@@ -1912,6 +1953,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	            parts = value.split(owner.numeralDecimalMark);
 	            partInteger = parts[0];
 	            partDecimal = owner.numeralDecimalMark + parts[1].slice(0, owner.numeralDecimalScale);
+	        }
+
+	        if (owner.numeralIntegerScale > 0) {
+	            partInteger = partInteger.slice(0, owner.numeralIntegerScale + (value.slice(0, 1) === '-' ? 1 : 0));
 	        }
 
 	        switch (owner.numeralThousandsGroupStyle) {
@@ -2012,7 +2057,90 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	        });
 
-	        return result;
+	        return this.getFixedDateString(result);
+	    },
+
+	    getFixedDateString: function getFixedDateString(value) {
+	        var owner = this,
+	            datePattern = owner.datePattern,
+	            date = [],
+	            dayIndex = 0,
+	            monthIndex = 0,
+	            yearIndex = 0,
+	            dayStartIndex = 0,
+	            monthStartIndex = 0,
+	            yearStartIndex = 0,
+	            day,
+	            month,
+	            year;
+
+	        // mm-dd || dd-mm
+	        if (value.length === 4 && datePattern[0].toLowerCase() !== 'y' && datePattern[1].toLowerCase() !== 'y') {
+	            dayStartIndex = datePattern[0] === 'd' ? 0 : 2;
+	            monthStartIndex = 2 - dayStartIndex;
+	            day = parseInt(value.slice(dayStartIndex, dayStartIndex + 2), 10);
+	            month = parseInt(value.slice(monthStartIndex, monthStartIndex + 2), 10);
+
+	            date = this.getFixedDate(day, month, 0);
+	        }
+
+	        // yyyy-mm-dd || yyyy-dd-mm || mm-dd-yyyy || dd-mm-yyyy || dd-yyyy-mm || mm-yyyy-dd
+	        if (value.length === 8) {
+	            datePattern.forEach(function (type, index) {
+	                switch (type) {
+	                    case 'd':
+	                        dayIndex = index;
+	                        break;
+	                    case 'm':
+	                        monthIndex = index;
+	                        break;
+	                    default:
+	                        yearIndex = index;
+	                        break;
+	                }
+	            });
+
+	            yearStartIndex = yearIndex * 2;
+	            dayStartIndex = dayIndex <= yearIndex ? dayIndex * 2 : dayIndex * 2 + 2;
+	            monthStartIndex = monthIndex <= yearIndex ? monthIndex * 2 : monthIndex * 2 + 2;
+
+	            day = parseInt(value.slice(dayStartIndex, dayStartIndex + 2), 10);
+	            month = parseInt(value.slice(monthStartIndex, monthStartIndex + 2), 10);
+	            year = parseInt(value.slice(yearStartIndex, yearStartIndex + 4), 10);
+
+	            date = this.getFixedDate(day, month, year);
+	        }
+
+	        return date.length === 0 ? value : datePattern.reduce(function (previous, current) {
+	            switch (current) {
+	                case 'd':
+	                    return previous + owner.addLeadingZero(date[0]);
+	                case 'm':
+	                    return previous + owner.addLeadingZero(date[1]);
+	                default:
+	                    return previous + '' + (date[2] || '');
+	            }
+	        }, '');
+	    },
+
+	    getFixedDate: function getFixedDate(day, month, year) {
+	        day = Math.min(day, 31);
+	        month = Math.min(month, 12);
+	        year = parseInt(year || 0, 10);
+
+	        if (month < 7 && month % 2 === 0 || month > 8 && month % 2 === 1) {
+	            day = Math.min(day, month === 2 ? this.isLeapYear(year) ? 29 : 28 : 30);
+	        }
+
+	        return [day, month, year];
+	    },
+
+	    isLeapYear: function isLeapYear(year) {
+	        return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
+	    },
+
+	    addLeadingZero: function addLeadingZero(number) {
+	        return (number < 10 ? '0' : '') + number;
 	    }
 	};
 
@@ -2234,17 +2362,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        });
 	    },
 
+	    getDelimiterREByDelimiter: function getDelimiterREByDelimiter(delimiter) {
+	        return new RegExp(delimiter.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1'), 'g');
+	    },
+
 	    stripDelimiters: function stripDelimiters(value, delimiter, delimiters) {
+	        var owner = this;
+
 	        // single delimiter
 	        if (delimiters.length === 0) {
-	            var delimiterRE = delimiter ? new RegExp('\\' + delimiter, 'g') : '';
+	            var delimiterRE = delimiter ? owner.getDelimiterREByDelimiter(delimiter) : '';
 
 	            return value.replace(delimiterRE, '');
 	        }
 
 	        // multiple delimiters
 	        delimiters.forEach(function (current) {
-	            value = value.replace(new RegExp('\\' + current, 'g'), '');
+	            value = value.replace(owner.getDelimiterREByDelimiter(current), '');
 	        });
 
 	        return value;
@@ -2392,6 +2526,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	                // numeral
 	                target.numeral = !!opts.numeral;
+	                target.numeralIntegerScale = opts.numeralIntegerScale > 0 ? opts.numeralIntegerScale : 0;
 	                target.numeralDecimalScale = opts.numeralDecimalScale >= 0 ? opts.numeralDecimalScale : 2;
 	                target.numeralDecimalMark = opts.numeralDecimalMark || '.';
 	                target.numeralThousandsGroupStyle = opts.numeralThousandsGroupStyle || 'thousand';
@@ -2414,9 +2549,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	                target.postfixLength = target.postfix.length;
 	                target.rawValueTrimPostfix = !!opts.rawValueTrimPostfix;
 
-	                target.initValue = opts.initValue === undefined ? '' : opts.initValue.toString();
+	                target.initValue = opts.initValue !== undefined && opts.initValue !== null ? opts.initValue.toString() : '';
 
 	                target.delimiter = opts.delimiter || opts.delimiter === '' ? opts.delimiter : opts.date ? '/' : opts.numeral ? ',' : opts.phone ? ' ' : ' ';
+	                target.delimiterLength = target.delimiter.length;
 	                target.delimiters = opts.delimiters || [];
 
 	                target.blocks = opts.blocks || [];

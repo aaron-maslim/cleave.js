@@ -88,6 +88,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // no need to use this lib
 	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
+	            owner.onInput(pps.initValue);
+
 	            return;
 	        }
 
@@ -123,6 +125,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        pps.numeralFormatter = new Cleave.NumeralFormatter(
 	            pps.numeralDecimalMark,
+	            pps.numeralIntegerScale,
 	            pps.numeralDecimalScale,
 	            pps.numeralThousandsGroupStyle,
 	            pps.numeralPositiveOnly,
@@ -175,7 +178,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        owner.lastInputValue = currentValue;
 
 	        // hit backspace when last character is delimiter
-	        if (charCode === 8 && Util.isDelimiter(currentValue.slice(-1), pps.delimiter, pps.delimiters)) {
+	        if (charCode === 8 && Util.isDelimiter(currentValue.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
 	            pps.backspace = true;
 
 	            return;
@@ -233,8 +236,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // case 2: last character is not delimiter which is:
 	        // 12|34* -> hit backspace -> 1|34*
 	        // note: no need to apply this for numeral mode
-	        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-1), pps.delimiter, pps.delimiters)) {
-	            value = Util.headStr(value, value.length - 1);
+	        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
+	            value = Util.headStr(value, value.length - pps.delimiterLength);
 	        }
 
 	        // phone formatter
@@ -263,6 +266,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // strip prefix
 	        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
+	        
+	        // strip postfix
+	        value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
 
 	        // strip non-numeric characters
 	        value = pps.numericOnly ? Util.strip(value, /[^\d]/g) : value;
@@ -274,6 +280,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // prefix
 	        if (pps.prefix) {
 	            value = pps.prefix + value;
+
+	            // no blocks specified, no need to do formatting
+	            if (pps.blocksLength === 0) {
+	                pps.result = value;
+	                owner.updateValueState();
+
+	                return;
+	            }
+	        }
+
+	        // postfix
+	        if (pps.postfix) {
+	            value = value + pps.postfix;
 
 	            // no blocks specified, no need to do formatting
 	            if (pps.blocksLength === 0) {
@@ -355,7 +374,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    setRawValue: function (value) {
 	        var owner = this, pps = owner.properties;
 
-	        value = value !== undefined ? value.toString() : '';
+	        value = value !== undefined && value !== null ? value.toString() : '';
 
 	        if (pps.numeral) {
 	            value = value.replace('.', pps.numeralDecimalMark);
@@ -373,6 +392,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        if (pps.rawValueTrimPrefix) {
 	            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+	        }
+	        if (pps.rawValueTrimPostfix) {
+	            rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
 	        }
 
 	        if (pps.numeral) {
@@ -424,6 +446,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 
 	var NumeralFormatter = function (numeralDecimalMark,
+	                                 numeralIntegerScale,
 	                                 numeralDecimalScale,
 	                                 numeralThousandsGroupStyle,
 	                                 numeralPositiveOnly,
@@ -431,6 +454,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var owner = this;
 
 	    owner.numeralDecimalMark = numeralDecimalMark || '.';
+	    owner.numeralIntegerScale = numeralIntegerScale > 0 ? numeralIntegerScale : 0;
 	    owner.numeralDecimalScale = numeralDecimalScale >= 0 ? numeralDecimalScale : 2;
 	    owner.numeralThousandsGroupStyle = numeralThousandsGroupStyle || NumeralFormatter.groupStyle.thousand;
 	    owner.numeralPositiveOnly = !!numeralPositiveOnly;
@@ -482,6 +506,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	            parts = value.split(owner.numeralDecimalMark);
 	            partInteger = parts[0];
 	            partDecimal = owner.numeralDecimalMark + parts[1].slice(0, owner.numeralDecimalScale);
+	        }
+
+	        if (owner.numeralIntegerScale > 0) {
+	          partInteger = partInteger.slice(0, owner.numeralIntegerScale + (value.slice(0, 1) === '-' ? 1 : 0));
 	        }
 
 	        switch (owner.numeralThousandsGroupStyle) {
@@ -582,7 +610,82 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	        });
 
-	        return result;
+	        return this.getFixedDateString(result);
+	    },
+
+	    getFixedDateString: function (value) {
+	        var owner = this, datePattern = owner.datePattern, date = [],
+	            dayIndex = 0, monthIndex = 0, yearIndex = 0,
+	            dayStartIndex = 0, monthStartIndex = 0, yearStartIndex = 0,
+	            day, month, year;
+
+	        // mm-dd || dd-mm
+	        if (value.length === 4 && datePattern[0].toLowerCase() !== 'y' && datePattern[1].toLowerCase() !== 'y') {
+	            dayStartIndex = datePattern[0] === 'd' ? 0 : 2;
+	            monthStartIndex = 2 - dayStartIndex;
+	            day = parseInt(value.slice(dayStartIndex, dayStartIndex + 2), 10);
+	            month = parseInt(value.slice(monthStartIndex, monthStartIndex + 2), 10);
+
+	            date = this.getFixedDate(day, month, 0);
+	        }
+
+	        // yyyy-mm-dd || yyyy-dd-mm || mm-dd-yyyy || dd-mm-yyyy || dd-yyyy-mm || mm-yyyy-dd
+	        if (value.length === 8) {
+	            datePattern.forEach(function (type, index) {
+	                switch (type) {
+	                case 'd':
+	                    dayIndex = index;
+	                    break;
+	                case 'm':
+	                    monthIndex = index;
+	                    break;
+	                default:
+	                    yearIndex = index;
+	                    break;
+	                }
+	            });
+
+	            yearStartIndex = yearIndex * 2;
+	            dayStartIndex = (dayIndex <= yearIndex) ? dayIndex * 2 : (dayIndex * 2 + 2);
+	            monthStartIndex = (monthIndex <= yearIndex) ? monthIndex * 2 : (monthIndex * 2 + 2);
+
+	            day = parseInt(value.slice(dayStartIndex, dayStartIndex + 2), 10);
+	            month = parseInt(value.slice(monthStartIndex, monthStartIndex + 2), 10);
+	            year = parseInt(value.slice(yearStartIndex, yearStartIndex + 4), 10);
+
+	            date = this.getFixedDate(day, month, year);
+	        }
+
+	        return date.length === 0 ? value : datePattern.reduce(function (previous, current) {
+	            switch (current) {
+	            case 'd':
+	                return previous + owner.addLeadingZero(date[0]);
+	            case 'm':
+	                return previous + owner.addLeadingZero(date[1]);
+	            default:
+	                return previous + '' + (date[2] || '');
+	            }
+	        }, '');
+	    },
+
+	    getFixedDate: function (day, month, year) {
+	        day = Math.min(day, 31);
+	        month = Math.min(month, 12);
+	        year = parseInt((year || 0), 10);
+
+	        if ((month < 7 && month % 2 === 0) || (month > 8 && month % 2 === 1)) {
+	            day = Math.min(day, month === 2 ? (this.isLeapYear(year) ? 29 : 28) : 30);
+	        }
+
+	        return [day, month, year];
+	    },
+
+	    isLeapYear: function (year) {
+	        return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0);
+	    },
+
+	    addLeadingZero: function (number) {
+	        return (number < 10 ? '0' : '') + number;
 	    }
 	};
 
@@ -809,17 +912,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        });
 	    },
 
+	    getDelimiterREByDelimiter: function (delimiter) {
+	        return new RegExp(delimiter.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1'), 'g');
+	    },
+
 	    stripDelimiters: function (value, delimiter, delimiters) {
+	        var owner = this;
+
 	        // single delimiter
 	        if (delimiters.length === 0) {
-	            var delimiterRE = delimiter ? new RegExp('\\' + delimiter, 'g') : '';
+	            var delimiterRE = delimiter ? owner.getDelimiterREByDelimiter(delimiter) : '';
 
 	            return value.replace(delimiterRE, '');
 	        }
 
 	        // multiple delimiters
 	        delimiters.forEach(function (current) {
-	            value = value.replace(new RegExp('\\' + current, 'g'), '');
+	            value = value.replace(owner.getDelimiterREByDelimiter(current), '');
 	        });
 
 	        return value;
@@ -967,6 +1076,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // numeral
 	        target.numeral = !!opts.numeral;
+	        target.numeralIntegerScale = opts.numeralIntegerScale > 0 ? opts.numeralIntegerScale : 0;
 	        target.numeralDecimalScale = opts.numeralDecimalScale >= 0 ? opts.numeralDecimalScale : 2;
 	        target.numeralDecimalMark = opts.numeralDecimalMark || '.';
 	        target.numeralThousandsGroupStyle = opts.numeralThousandsGroupStyle || 'thousand';
@@ -989,7 +1099,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        target.postfixLength = target.postfix.length;
 	        target.rawValueTrimPostfix = !!opts.rawValueTrimPostfix;
 
-	        target.initValue = opts.initValue === undefined ? '' : opts.initValue.toString();
+	        target.initValue = (opts.initValue !== undefined && opts.initValue !== null) ? opts.initValue.toString() : '';
 
 	        target.delimiter =
 	            (opts.delimiter || opts.delimiter === '') ? opts.delimiter :
@@ -997,6 +1107,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    (opts.numeral ? ',' :
 	                        (opts.phone ? ' ' :
 	                            ' ')));
+	        target.delimiterLength = target.delimiter.length;
 	        target.delimiters = opts.delimiters || [];
 
 	        target.blocks = opts.blocks || [];
