@@ -323,7 +323,6 @@ var Cleave = CreateReactClass({
                 return;
             }
         }
-        console.log("POSTFIX VALUE AFTER AFTER POSTIF", value);
 
         // update credit card props
         if (pps.creditCard) {

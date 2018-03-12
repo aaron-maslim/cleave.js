@@ -949,26 +949,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // (PRE123, 3) -> 123
 	    // (PR123, 3) -> 23 this happens when user hits backspace in front of "PRE"
 	    getPrefixStrippedValue: function (value, prefix, prefixLength) {
-	        if (value.slice(0, prefixLength) !== prefix) {
-	            var diffIndex = this.getFirstDiffIndex(prefix, value.slice(0, prefixLength));
+	        if (prefixLength) {
+	            if (value.slice(0, prefixLength) !== prefix) {
+	                var diffIndex = this.getFirstDiffIndex(prefix, value.slice(0, prefixLength));
 
-	            value = prefix + value.slice(diffIndex, diffIndex + 1) + value.slice(prefixLength + 1);
+	                value = prefix + value.slice(diffIndex, diffIndex + 1) + value.slice(prefixLength + 1);
+	            }
+
+	            return value.slice(prefixLength);
+	        } else {
+	            return value;
 	        }
-
-	        return value.slice(prefixLength);
 	    },
 
 	    getPostfixStrippedValue: function (value, postfix, postfixLength) {
-	        if (value.slice(-postfixLength) !== postfix) {
-	            var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
-	            if (value.slice( -(diffIndex + postfixLength + 1), -(diffIndex + 1)) === postfix) {
-	                value = value.slice(0, -(diffIndex + postfixLength + 1)) + value.slice(-(diffIndex + 1)) + postfix;
-	            } else {
-	                value = value.slice(0, -(diffIndex + postfixLength)) + value.slice(-(diffIndex + 1)) + postfix;
+	        if (postfixLength) {
+	            if (value.slice(-postfixLength) !== postfix) {
+	                var diffIndex = this.getFirstDiffIndex(postfix, value.slice(-postfixLength));
+	                if (value.slice( -(diffIndex + postfixLength + 1), -(diffIndex + 1)) === postfix) {
+	                    value = value.slice(0, -(diffIndex + postfixLength + 1)) + value.slice(-(diffIndex + 1)) + postfix;
+	                } else {
+	                    value = value.slice(0, -(diffIndex + postfixLength)) + value.slice(-(diffIndex + 1)) + postfix;
+	                }
 	            }
-	        }
 
-	        return value.slice(0, -postfixLength);
+	            return value.slice(0, -postfixLength);
+	        } else {
+	            return value;
+	        }
 	    },
 
 	    isPostfix: function (letter, postfix) {
