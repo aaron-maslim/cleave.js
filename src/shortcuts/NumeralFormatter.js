@@ -5,6 +5,7 @@ var NumeralFormatter = function (numeralDecimalMark,
                                  numeralDecimalScale,
                                  numeralThousandsGroupStyle,
                                  numeralPositiveOnly,
+                                 stripLeadingZeroes,
                                  delimiter) {
     var owner = this;
 
@@ -13,6 +14,7 @@ var NumeralFormatter = function (numeralDecimalMark,
     owner.numeralDecimalScale = numeralDecimalScale >= 0 ? numeralDecimalScale : 2;
     owner.numeralThousandsGroupStyle = numeralThousandsGroupStyle || NumeralFormatter.groupStyle.thousand;
     owner.numeralPositiveOnly = !!numeralPositiveOnly;
+    owner.stripLeadingZeroes = stripLeadingZeroes !== false;
     owner.delimiter = (delimiter || delimiter === '') ? delimiter : ',';
     owner.delimiterRE = delimiter ? new RegExp('\\' + delimiter, 'g') : '';
 };
@@ -20,7 +22,8 @@ var NumeralFormatter = function (numeralDecimalMark,
 NumeralFormatter.groupStyle = {
     thousand: 'thousand',
     lakh:     'lakh',
-    wan:      'wan'
+    wan:      'wan',
+    none:     'none'    
 };
 
 NumeralFormatter.prototype = {
@@ -50,10 +53,12 @@ NumeralFormatter.prototype = {
             .replace('N', owner.numeralPositiveOnly ? '' : '-')
 
             // replace decimal mark
-            .replace('M', owner.numeralDecimalMark)
+            .replace('M', owner.numeralDecimalMark);
 
-            // strip any leading zeros
-            .replace(/^(-)?0+(?=\d)/, '$1');
+        // strip any leading zeros
+        if (owner.stripLeadingZeroes) {
+            value = value.replace(/^(-)?0+(?=\d)/, '$1');
+        }
 
         partInteger = value;
 
@@ -78,8 +83,10 @@ NumeralFormatter.prototype = {
 
             break;
 
-        default:
+        case NumeralFormatter.groupStyle.thousand:
             partInteger = partInteger.replace(/(\d)(?=(\d{3})+$)/g, '$1' + owner.delimiter);
+
+            break;
         }
 
         if (!hideDecimal) {

@@ -3,6 +3,7 @@
 var DateFormatter = function (datePattern) {
     var owner = this;
 
+    owner.date = [];
     owner.blocks = [];
     owner.datePattern = datePattern;
     owner.initBlocks();
@@ -18,6 +19,15 @@ DateFormatter.prototype = {
                 owner.blocks.push(2);
             }
         });
+    },
+
+    getISOFormatDate: function () {
+        var owner = this,
+            date = owner.date;
+
+        return date[2] ? (
+            date[2] + '-' + owner.addLeadingZero(date[1]) + '-' + owner.addLeadingZero(date[0])
+        ) : '';
     },
 
     getBlocks: function () {
@@ -73,7 +83,7 @@ DateFormatter.prototype = {
         var owner = this, datePattern = owner.datePattern, date = [],
             dayIndex = 0, monthIndex = 0, yearIndex = 0,
             dayStartIndex = 0, monthStartIndex = 0, yearStartIndex = 0,
-            day, month, year;
+            day, month, year, fullYearDone = false;
 
         // mm-dd || dd-mm
         if (value.length === 4 && datePattern[0].toLowerCase() !== 'y' && datePattern[1].toLowerCase() !== 'y') {
@@ -109,8 +119,12 @@ DateFormatter.prototype = {
             month = parseInt(value.slice(monthStartIndex, monthStartIndex + 2), 10);
             year = parseInt(value.slice(yearStartIndex, yearStartIndex + 4), 10);
 
+            fullYearDone = value.slice(yearStartIndex, yearStartIndex + 4).length === 4;
+
             date = this.getFixedDate(day, month, year);
         }
+
+        owner.date = date;
 
         return date.length === 0 ? value : datePattern.reduce(function (previous, current) {
             switch (current) {
@@ -119,7 +133,7 @@ DateFormatter.prototype = {
             case 'm':
                 return previous + owner.addLeadingZero(date[1]);
             default:
-                return previous + '' + (date[2] || '');
+                return previous + (fullYearDone ? owner.addLeadingZeroForYear(date[2]) : '');
             }
         }, '');
     },
@@ -142,6 +156,10 @@ DateFormatter.prototype = {
 
     addLeadingZero: function (number) {
         return (number < 10 ? '0' : '') + number;
+    },
+
+    addLeadingZeroForYear: function (number) {
+        return (number < 10 ? '000' : (number < 100 ? '00' : (number < 1000 ? '0' : ''))) + number;
     }
 };
 

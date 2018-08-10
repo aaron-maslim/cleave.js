@@ -10,7 +10,12 @@
     "form",
     "input"
   ],
-  "version": "0.9.2",
+  "version": "1.4.2",
+   "files": [
+    "src",
+    "dist",
+    "react.js"
+  ],
   "author": {
     "name": "Max Huang",
     "url": "http://github.com/nosir",
@@ -39,6 +44,7 @@
     "browserify": "^13.0.1",
     "chai": "^3.5.0",
     "create-react-class": "^15.5.2",
+    "del": "^3.0.0",
     "errorify": "^0.3.1",
     "eslint-plugin-react": "^5.2.2",
     "gulp": "^3.9.1",

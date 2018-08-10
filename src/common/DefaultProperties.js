@@ -23,6 +23,11 @@ var DefaultProperties = {
         target.phoneRegionCode = opts.phoneRegionCode || 'AU';
         target.phoneFormatter = {};
 
+        // time
+        target.time = !!opts.time;
+        target.timePattern = opts.timePattern || ['h', 'm', 's'];
+        target.timeFormatter = {};
+
         // date
         target.date = !!opts.date;
         target.datePattern = opts.datePattern || ['d', 'm', 'Y'];
@@ -37,6 +42,7 @@ var DefaultProperties = {
         target.numeralPositiveOnly = !!opts.numeralPositiveOnly;
         target.min_value = opts.min_value;
         target.max_value = opts.max_value;
+        target.stripLeadingZeroes = opts.stripLeadingZeroes !== false;
 
         // others
         target.numericOnly = target.creditCard || target.date || !!opts.numericOnly;
@@ -44,7 +50,8 @@ var DefaultProperties = {
         target.uppercase = !!opts.uppercase;
         target.lowercase = !!opts.lowercase;
 
-        target.prefix = (target.creditCard || target.phone || target.date) ? '' : (opts.prefix || '');
+        target.prefix = (target.creditCard || target.date) ? '' : (opts.prefix || '');
+        target.noImmediatePrefix = !!opts.noImmediatePrefix;
         target.prefixLength = target.prefix.length;
         target.rawValueTrimPrefix = !!opts.rawValueTrimPrefix;
         target.copyDelimiter = !!opts.copyDelimiter;
@@ -58,25 +65,29 @@ var DefaultProperties = {
         target.delimiter =
             (opts.delimiter || opts.delimiter === '') ? opts.delimiter :
                 (opts.date ? '/' :
-                    (opts.numeral ? ',' :
-                        (opts.phone ? ' ' :
-                            ' ')));
+                    (opts.time ? ':' :
+                        (opts.numeral ? ',' :
+                            (opts.phone ? ' ' :
+                                ' '))));
         target.delimiterLength = target.delimiter.length;
+        target.delimiterLazyShow = !!opts.delimiterLazyShow;
         target.delimiters = opts.delimiters || [];
 
         target.blocks = opts.blocks || [];
         target.blocksLength = target.blocks.length;
 
         target.root = (typeof global === 'object' && global) ? global : window;
+        target.document = opts.document || target.root.document;
 
         target.maxLength = 0;
 
         target.backspace = false;
         target.result = '';
 
+        target.onValueChanged = opts.onValueChanged || (function () {});
+
         return target;
     }
 };
 
 module.exports = DefaultProperties;
-

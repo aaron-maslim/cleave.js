@@ -5,14 +5,22 @@ var CreateReactClass = require('create-react-class');
 
 var NumeralFormatter = require('./shortcuts/NumeralFormatter');
 var DateFormatter = require('./shortcuts/DateFormatter');
+var TimeFormatter = require('./shortcuts/TimeFormatter');
 var PhoneFormatter = require('./shortcuts/PhoneFormatter');
 var CreditCardDetector = require('./shortcuts/CreditCardDetector');
 var Util = require('./utils/Util');
 var DefaultProperties = require('./common/DefaultProperties');
 
-var Cleave = CreateReactClass({
+var cleaveReactClass = CreateReactClass({
     componentDidMount: function () {
         this.init();
+    },
+
+    componentDidUpdate: function () {
+        var owner = this,
+            pps = owner.properties;
+
+        Util.setSelection(owner.element, owner.state.cursorPosition, pps.document);
     },
 
     componentWillReceiveProps: function (nextProps) {
@@ -32,9 +40,9 @@ var Cleave = CreateReactClass({
         if (newValue !== undefined) {
             newValue = newValue.toString();
 
-            if (newValue !== owner.properties.initValue) {
+            if (newValue !== owner.properties.initValue && newValue !== owner.properties.result) {
                 owner.properties.initValue = newValue;
-                owner.onInput(newValue);
+                owner.onInput(newValue, true);
             }
         }
 
@@ -58,12 +66,17 @@ var Cleave = CreateReactClass({
             onKeyDown: onKeyDown || Util.noop
         };
 
-        (options || {}).initValue = value;
+        if (!options) {
+            options = {};
+        }
+
+        options.initValue = value;
 
         owner.properties = DefaultProperties.assign({}, options);
 
         return {
-            value: owner.properties.result
+            value: owner.properties.result,
+            cursorPosition: 0
         };
     },
 
@@ -72,7 +85,7 @@ var Cleave = CreateReactClass({
             pps = owner.properties;
 
         // so no need for this lib at all
-        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix && !pps.postfix)) {
+        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.time && !pps.date && (pps.blocksLength === 0 && !pps.prefix && !pps.postfix)) {
             owner.onInput(pps.initValue);
             owner.registeredEvents.onInit(owner);
 
@@ -85,9 +98,14 @@ var Cleave = CreateReactClass({
 
         owner.initPhoneFormatter();
         owner.initDateFormatter();
+        owner.initTimeFormatter();
         owner.initNumeralFormatter();
 
-        owner.onInput(pps.initValue);
+        // avoid touch input field if value is null
+        // otherwise Firefox will add red box-shadow for <input required />
+        if (pps.initValue || (pps.prefix && !pps.noImmediatePrefix)) {
+            owner.onInput(pps.initValue);
+        }
 
         owner.registeredEvents.onInit(owner);
     },
@@ -106,8 +124,23 @@ var Cleave = CreateReactClass({
             pps.numeralDecimalScale,
             pps.numeralThousandsGroupStyle,
             pps.numeralPositiveOnly,
+            pps.stripLeadingZeroes,
             pps.delimiter
         );
+    },
+
+    initTimeFormatter: function () {
+        var owner = this,
+            pps = owner.properties;
+
+        if (!pps.time) {
+            return;
+        }
+
+        pps.timeFormatter = new TimeFormatter(pps.timePattern);
+        pps.blocks = pps.timeFormatter.getBlocks();
+        pps.blocksLength = pps.blocks.length;
+        pps.maxLength = Util.getMaxLength(pps.blocks);
     },
 
     initDateFormatter: function () {
@@ -154,7 +187,16 @@ var Cleave = CreateReactClass({
             value = value.replace('.', pps.numeralDecimalMark);
         }
 
-        owner.onChange({target: {value: value}});
+        pps.backspace = false;
+
+        owner.onChange({
+            target: {value: value},
+
+            // Methods to better resemble a SyntheticEvent
+            stopPropagation: Util.noop,
+            preventDefault: Util.noop,
+            persist: Util.noop
+        });
     },
 
     getRawValue: function () {
@@ -162,19 +204,26 @@ var Cleave = CreateReactClass({
             rawValue = pps.result;
 
         if (pps.rawValueTrimPrefix) {
-            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength, pps.result);
         }
         if (pps.rawValueTrimPostfix) {
             rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
         }
 
         if (pps.numeral) {
-            rawValue = pps.numeralFormatter.getRawValue(rawValue);
+            rawValue = pps.numeralFormatter ? pps.numeralFormatter.getRawValue(rawValue) : '';
         } else {
             rawValue = Util.stripDelimiters(rawValue, pps.delimiter, pps.delimiters);
         }
 
         return rawValue;
+    },
+
+    getISOFormatDate: function () {
+        var owner = this,
+            pps = owner.properties;
+
+        return pps.date ? pps.dateFormatter.getISOFormatDate() : '';
     },
 
     onInit: function (owner) {
@@ -206,6 +255,8 @@ var Cleave = CreateReactClass({
         event.target.value = pps.result;
 
         owner.registeredEvents.onFocus(event);
+
+        Util.fixPrefixCursor(owner.element, pps.prefix, pps.delimiter, pps.delimiters);
     },
 
     onBlur: function (event) {
@@ -229,16 +280,20 @@ var Cleave = CreateReactClass({
         owner.registeredEvents.onChange(event);
     },
 
-    onInput: function (value) {
-        var owner = this, pps = owner.properties,
-            prev = pps.result;
+    onInput: function (value, fromProps) {
+        var owner = this, pps = owner.properties;
+
+        if (Util.isAndroidBackspaceKeydown(owner.lastInputValue, owner.element.value) &&
+        Util.isDelimiter(pps.result.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
+            pps.backspace = true;
+        }
 
         // case 1: delete one more character "4"
         // 1234*| -> hit backspace -> 123|
         // case 2: last character is not delimiter which is:
         // 12|34* -> hit backspace -> 1|34*
 
-        if (!pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
+        if (!fromProps && !pps.numeral && pps.backspace && !Util.isDelimiter(value.slice(-pps.delimiterLength), pps.delimiter, pps.delimiters)) {
             value = Util.headStr(value, value.length - pps.delimiterLength);
         }
 
@@ -259,7 +314,7 @@ var Cleave = CreateReactClass({
         
             var rawValue = value;
             if (pps.rawValueTrimPrefix) {
-                rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+                rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength, pps.result);
             }
             if (pps.rawValueTrimPostfix) {
                 rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
@@ -276,8 +331,12 @@ var Cleave = CreateReactClass({
                     value = pps.max_value;
                 }
             }
-            
-            pps.result = pps.prefix + pps.numeralFormatter.format(String(value), (parseFloat(rawValue) >= parseFloat(pps.max_value))) + pps.postfix;
+
+            if ((pps.prefix && (!pps.noImmediatePrefix || value.length)) || pps.postfix) {
+                pps.result = pps.prefix + pps.numeralFormatter.format(String(value), (parseFloat(rawValue) >= parseFloat(pps.max_value))) + pps.postfix;
+            } else {
+                pps.result = pps.numeralFormatter.format(String(value), (parseFloat(rawValue) >= parseFloat(pps.max_value)));
+            }
             if (!rawValue || rawValue === '') {
                 pps.result = '';
             }
@@ -291,11 +350,16 @@ var Cleave = CreateReactClass({
             value = pps.dateFormatter.getValidatedDate(value);
         }
 
+        // time
+        if (pps.time) {
+            value = pps.timeFormatter.getValidatedTime(value);
+        }
+
         // strip delimiters
         value = Util.stripDelimiters(value, pps.delimiter, pps.delimiters);
 
         // strip prefix
-        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
+        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength, pps.result);
         
         // strip postfix
         value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
@@ -308,7 +372,7 @@ var Cleave = CreateReactClass({
         value = pps.lowercase ? value.toLowerCase() : value;
 
         // prefix and postfix
-        if (pps.prefix || pps.postfix) {
+        if ((pps.prefix && (!pps.noImmediatePrefix || value.length)) || pps.postfix) {
             if (value) {
                 value = pps.prefix + value + pps.postfix;
             } else {
@@ -333,13 +397,11 @@ var Cleave = CreateReactClass({
         value = pps.maxLength > 0 ? Util.headStr(value, pps.maxLength) : value;
 
         // apply blocks
-        pps.result = Util.getFormattedValue(value, pps.blocks, pps.blocksLength, pps.delimiter, pps.delimiters);
-
-        // nothing changed
-        // prevent update value to avoid caret position change
-        if (prev === pps.result && prev !== pps.prefix && prev !== pps.postfix) {
-            return;
-        }
+        pps.result = Util.getFormattedValue(
+            value,
+            pps.blocks, pps.blocksLength,
+            pps.delimiter, pps.delimiters, pps.delimiterLazyShow
+        );
 
         owner.updateValueState();
     },
@@ -368,37 +430,58 @@ var Cleave = CreateReactClass({
     },
 
     updateValueState: function () {
-        var owner = this;
+        var owner = this,
+            pps = owner.properties;
+
+        if (!owner.element) {
+            owner.setState({ value: pps.result });
+        }
+
+        var endPos = owner.element.selectionEnd;
+        var oldValue = owner.element.value;
+        var newValue = pps.result;
+
+        owner.lastInputValue = newValue;
+
+        endPos = Util.getNextCursorPosition(endPos, oldValue, newValue, pps.delimiter, pps.delimiters);
 
         if (owner.isAndroid) {
             window.setTimeout(function () {
-                owner.setState({value: owner.properties.result});
+                owner.setState({ value: newValue, cursorPosition: endPos });
             }, 1);
 
             return;
         }
 
-        owner.setState({value: owner.properties.result});
+        owner.setState({ value: newValue, cursorPosition: endPos });
     },
 
     render: function () {
-        var owner = this,
-            { value, options, onKeyDown, onFocus, onBlur, onChange, onInit, htmlRef, ...propsToTransfer } = owner.props;
+        var owner = this;
+        // eslint-disable-next-line
+        var { value, options, onKeyDown, onFocus, onBlur, onChange, onInit, htmlRef, ...propsToTransfer } = owner.props;
 
         return (
             <input
                 type="text"
-                ref={htmlRef}
+                ref={function (ref) {
+                    owner.element = ref;
+
+                    if (!htmlRef) {
+                        return;
+                    }
+
+                    htmlRef.apply(this, arguments);
+                }}
                 value={owner.state.value}
                 onKeyDown={owner.onKeyDown}
                 onChange={owner.onChange}
                 onFocus={owner.onFocus}
                 onBlur={owner.onBlur}
                 {...propsToTransfer}
-                data-cleave-ignore={[value, options, onFocus, onBlur, onKeyDown, onChange, onInit, htmlRef]}
             />
         );
     }
 });
 
-module.exports = Cleave;
+module.exports = cleaveReactClass;

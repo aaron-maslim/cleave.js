@@ -26,6 +26,19 @@
     ]
   },
   {
+    "thousandsGroupStyle": "none",
+    "numbers": [
+      [
+        "01234567",
+        "1234567"
+      ],
+      [
+        "-01234567",
+        "-1234567"
+      ]
+    ]
+  },
+  {
     "thousandsGroupStyle": "thousand",
     "numbers": [
       [
@@ -263,5 +276,24 @@
         "1,234,567"
       ]
     ]
+  },
+  {
+    "thousandsGroupStyle": "thousand",
+    "stripLeadingZeroes": false,
+    "numbers": [
+      [
+        "000,000",
+        "000,000"
+      ],
+      [
+        "00",
+        "00"
+      ],
+      [
+        "000",
+        "000"
+      ]
+    ]
   }
+
 ]

@@ -1,4 +1,4 @@
-# Cleave.js Documentation 
+# Cleave.js Documentation
 
 [Documentation](https://github.com/nosir/cleave.js/blob/master/doc/doc.md) > ReactJS component usage
 
@@ -42,6 +42,14 @@ import Cleave from 'cleave.js/react';
 import CleavePhone from 'cleave.js/dist/addons/cleave-phone.{country}';
 ```
 
+**About the `{country}` code:** Unlike the `phoneRegionCode` value in `Cleave` component `options` property, the `country` here in this `import` statement must be given in lowercase.
+
+**Example:**
+
+```js
+import CleavePhone from 'cleave.js/dist/addons/cleave-phone.pt';
+```
+
 And define the component:
 
 ```js
@@ -54,7 +62,7 @@ class MyComponent extends React.Component {
             phoneRawValue:      '',
             customRawValue:     ''
         };
-        
+
         this.onCreditCardChange = this.onCreditCardChange.bind(this);
         this.onCreditCardFocus = this.onCreditCardFocus.bind(this);
         this.onPhoneChange = this.onPhoneChange.bind(this);
@@ -64,7 +72,7 @@ class MyComponent extends React.Component {
     onCreditCardChange(event) {
         this.setState({creditCardRawValue: event.target.rawValue});
     }
-    
+
     onCreditCardFocus(event) {
         // update some state
     }
@@ -151,7 +159,7 @@ var MyComponent = React.createClass({
     onCreditCardChange: function (event) {
         // formatted pretty value
         console.log(event.target.value);
-        
+
         // raw value
         console.log(event.target.rawValue);
     },
@@ -184,7 +192,7 @@ Then config your shim with [browserify-shim](https://github.com/thlorenz/browser
 
 ## How does it work?
 
-As you can see, here you simply use `<Cleave/>` as a normal `<input/>` field 
+As you can see, here you simply use `<Cleave/>` as a normal `<input/>` field
 
 - Attach HTML `<input/>` attributes
 
@@ -197,9 +205,9 @@ As you can see, here you simply use `<Cleave/>` as a normal `<input/>` field
 - Add ReactJS `onChange` event listener
 
     Internally it interpolates native React `onChange` and `onKeyDown` events, does all the formatting magic and triggers the event callback.
-    
+
     The only thing getting added to the event object is the `rawValue` (delimiter stripped value) of the input field, that you might be interested in.
-    
+
     In the example above, we get the `rawValue` and update its `state` in handler, eventually it will be passed to backend or `store` layer.
 
 ## Advanced usage
@@ -212,9 +220,25 @@ As you can see, here you simply use `<Cleave/>` as a normal `<input/>` field
         value="Default Card Value"/>
 ```
 
+### How to call public methods
+
+In order to call [public methods](https://github.com/nosir/cleave.js/blob/master/doc/public-methods.md), you will need to get the ref of the instance.
+
+Pass `onInit` callback into component, which returns the cleave instance, then store it as a variable or in state.
+
+```
+onCreditCardInit(cleave) {
+    this.setState({creditCardCleave: cleave});
+}
+```
+
+```
+<Cleave options={{creditCard: true}} onInit={this.onCreditCardInit} />
+```
+
 ### How to update raw value
 
-Basically, out of the box, cleave component can be seen as an uncontrolled input component, and there is no data binding between the `value` attribute and the actual value updating logic internally. 
+Basically, out of the box, cleave component can be seen as an uncontrolled input component, and there is no data binding between the `value` attribute and the actual value updating logic internally.
 
 Try to bind `value` with any state in your component can lead to unexpected behaviours. The only case of using `value` attribute is to pass it as the default value in initialization.
 
@@ -233,10 +257,10 @@ class MyComponent extends React.Component {
             creditCardCleave:   null,
             creditCardRawValue: ''
         };
-        
+
         this.onCreditCardChange = this.onCreditCardChange.bind(this);
         this.onCreditCardInit = this.onCreditCardInit.bind(this);
-        
+
         this.reset = this.reset.bind(this);
     }
 
@@ -259,7 +283,7 @@ class MyComponent extends React.Component {
                         options={{creditCard: true}}
                         onInit={this.onCreditCardInit}
                         onChange={this.onCreditCardChange}/>
-                        
+
                 <p>credit card: {this.state.creditCardRawValue}</p>
 
                 <button onClick={this.reset}>Reset!</button>
@@ -272,7 +296,7 @@ ReactDOM.render(<MyComponent/>, document.getElementById('content'));
 
 ```
 
-[JSFiddle](https://jsfiddle.net/nosir/pkd17gxg/)
+[JSFiddle](https://jsfiddle.net/nosir/k4pom0ap/)
 
 ### How to get ref of the input field
 
@@ -284,10 +308,10 @@ Instead of using `ref`, you need to use `htmlRef` to pass the ref callback funct
 class MyComponent extends React.Component {
     constructor(props, context) {
         super(props, context);
-        
+
         this.onBtnClick = this.onBtnClick.bind(this);
     }
-    
+
     onBtnClick() {
         this.ccInput.focus();
     }
@@ -306,11 +330,43 @@ class MyComponent extends React.Component {
 ReactDOM.render(<MyComponent/>, document.getElementById('content'));
 ```
 
-For more about ReactJS callback refs, check [here](https://facebook.github.io/react/docs/more-about-refs.html#the-ref-callback-attribute) 
+For more about ReactJS callback refs, check [here](https://facebook.github.io/react/docs/more-about-refs.html#the-ref-callback-attribute)
 
-Also please be aware cleave.js doesn't support [The ref String Attribute](https://facebook.github.io/react/docs/more-about-refs.html#the-ref-string-attribute), which is claimed as legacy by ReactJS (very likely to be deprecated in the future) 
+Also please be aware cleave.js doesn't support [The ref String Attribute](https://facebook.github.io/react/docs/more-about-refs.html#the-ref-string-attribute), which is claimed as legacy by ReactJS (very likely to be deprecated in the future)
 
 Please avoid using this ref to get / set any value of the input field, which can lead to unexpected behaviour.
+
+### How to use it with Redux Form
+
+Create a stateless component function:
+
+```js
+import Cleave from 'cleave.js/react';
+
+const renderCleaveField = field => (
+    <Cleave {...field.input} options={{creditCard: true}} />
+)
+```
+
+Render it into the normal `redux-form` `Field`
+
+```js
+<form onSubmit={...}>
+    <Field name="creditCard" component={renderCleaveField} />
+    <Field name="email" component="input" type="email" />
+    <button type="submit">Submit</button>
+</form>
+```
+
+Then it just works.
+
+Or, you could also use the normalize abstraction at `Field` level, check the discussion [here](https://github.com/nosir/cleave.js/issues/159#issuecomment-326487309)
+
+### How to use it with Redux Final Form
+
+Create an adapter with cleave.js:
+
+[here](https://github.com/nosir/cleave.js/issues/335#issuecomment-402936738)
 
 ## References
 

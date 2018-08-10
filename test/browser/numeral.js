@@ -51,6 +51,16 @@ describe('Numeral input field', function () {
         assert.equal(field.value, '1,2345,6789.01');
     });
 
+    it('should use no comma style', function () {
+        var cleave = new Cleave(field, {
+            numeral:                    true,
+            numeralThousandsGroupStyle: 'none'
+        });
+
+        cleave.setRawValue('123456789.01');
+        assert.equal(field.value, '123456789.01');
+    });
+
     it('should use defined positive only option', function () {
         var cleave = new Cleave(field, {
             numeral:             true,
@@ -59,5 +69,15 @@ describe('Numeral input field', function () {
 
         cleave.setRawValue('-1234.56');
         assert.equal(field.value, '1,234.56');
+    });
+
+    it('it should not strip leading zeroes', function () {
+        var cleave = new Cleave(field, {
+            numeral:             true,
+            stripLeadingZeroes:  false
+        });
+
+        cleave.setRawValue('000,001.01');
+        assert.equal(field.value, '000,001.01');
     });
 });

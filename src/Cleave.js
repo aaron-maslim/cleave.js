@@ -3,7 +3,7 @@
 /**
  * Construct a new Cleave instance by passing the configuration object
  *
- * @param {String / HTMLElement} element
+ * @param {String | HTMLElement} element
  * @param {Object} opts
  */
 var Cleave = function (element, opts) {
@@ -31,7 +31,7 @@ Cleave.prototype = {
         var owner = this, pps = owner.properties;
 
         // no need to use this lib
-        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
+        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.time && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
             owner.onInput(pps.initValue);
 
             return;
@@ -44,20 +44,27 @@ Cleave.prototype = {
 
         owner.onChangeListener = owner.onChange.bind(owner);
         owner.onKeyDownListener = owner.onKeyDown.bind(owner);
+        owner.onFocusListener = owner.onFocus.bind(owner);
         owner.onCutListener = owner.onCut.bind(owner);
         owner.onCopyListener = owner.onCopy.bind(owner);
 
         owner.element.addEventListener('input', owner.onChangeListener);
         owner.element.addEventListener('keydown', owner.onKeyDownListener);
+        owner.element.addEventListener('focus', owner.onFocusListener);
         owner.element.addEventListener('cut', owner.onCutListener);
         owner.element.addEventListener('copy', owner.onCopyListener);
 
 
         owner.initPhoneFormatter();
         owner.initDateFormatter();
+        owner.initTimeFormatter();
         owner.initNumeralFormatter();
 
-        owner.onInput(pps.initValue);
+        // avoid touch input field if value is null
+        // otherwise Firefox will add red box-shadow for <input required />
+        if (pps.initValue || (pps.prefix && !pps.noImmediatePrefix)) {
+            owner.onInput(pps.initValue);
+        }
     },
 
     initNumeralFormatter: function () {
@@ -73,8 +80,22 @@ Cleave.prototype = {
             pps.numeralDecimalScale,
             pps.numeralThousandsGroupStyle,
             pps.numeralPositiveOnly,
+            pps.stripLeadingZeroes,
             pps.delimiter
         );
+    },
+
+    initTimeFormatter: function() {
+        var owner = this, pps = owner.properties;
+
+        if (!pps.time) {
+            return;
+        }
+
+        pps.timeFormatter = new Cleave.TimeFormatter(pps.timePattern);
+        pps.blocks = pps.timeFormatter.getBlocks();
+        pps.blocksLength = pps.blocks.length;
+        pps.maxLength = Cleave.Util.getMaxLength(pps.blocks);
     },
 
     initDateFormatter: function () {
@@ -135,6 +156,13 @@ Cleave.prototype = {
         this.onInput(this.element.value);
     },
 
+    onFocus: function () {
+        var owner = this,
+            pps = owner.properties;
+
+        Cleave.Util.fixPrefixCursor(owner.element, pps.prefix, pps.delimiter, pps.delimiters);
+    },
+
     onCut: function (e) {
         this.copyClipboardData(e);
         this.onInput('');
@@ -172,7 +200,6 @@ Cleave.prototype = {
 
     onInput: function (value) {
         var owner = this, pps = owner.properties,
-            prev = value,
             Util = Cleave.Util;
 
         // case 1: delete one more character "4"
@@ -186,7 +213,11 @@ Cleave.prototype = {
 
         // phone formatter
         if (pps.phone) {
-            pps.result = pps.phoneFormatter.format(value);
+            if (pps.prefix && (!pps.noImmediatePrefix || value.length)) {
+                pps.result = pps.prefix + pps.phoneFormatter.format(value).slice(pps.prefix.length);
+            } else {
+                pps.result = pps.phoneFormatter.format(value);
+            }
             owner.updateValueState();
 
             return;
@@ -194,7 +225,11 @@ Cleave.prototype = {
 
         // numeral formatter
         if (pps.numeral) {
-            pps.result = pps.prefix + pps.numeralFormatter.format(value);
+            if (pps.prefix && (!pps.noImmediatePrefix || value.length)) {
+                pps.result = pps.prefix + pps.numeralFormatter.format(value);
+            } else {
+                pps.result = pps.numeralFormatter.format(value);
+            }
             owner.updateValueState();
 
             return;
@@ -205,11 +240,16 @@ Cleave.prototype = {
             value = pps.dateFormatter.getValidatedDate(value);
         }
 
+        // time
+        if (pps.time) {
+            value = pps.timeFormatter.getValidatedTime(value);
+        }
+
         // strip delimiters
         value = Util.stripDelimiters(value, pps.delimiter, pps.delimiters);
 
         // strip prefix
-        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength);
+        value = Util.getPrefixStrippedValue(value, pps.prefix, pps.prefixLength, pps.result);
         
         // strip postfix
         value = Util.getPostfixStrippedValue(value, pps.postfix, pps.postfixLength);
@@ -222,7 +262,7 @@ Cleave.prototype = {
         value = pps.lowercase ? value.toLowerCase() : value;
 
         // prefix
-        if (pps.prefix) {
+        if (pps.prefix && (!pps.noImmediatePrefix || value.length)) {
             value = pps.prefix + value;
 
             // no blocks specified, no need to do formatting
@@ -256,13 +296,11 @@ Cleave.prototype = {
         value = Util.headStr(value, pps.maxLength);
 
         // apply blocks
-        pps.result = Util.getFormattedValue(value, pps.blocks, pps.blocksLength, pps.delimiter, pps.delimiters);
-
-        // nothing changed
-        // prevent update value to avoid caret position change
-        if (prev === pps.result && prev !== pps.prefix) {
-            return;
-        }
+        pps.result = Util.getFormattedValue(
+            value,
+            pps.blocks, pps.blocksLength,
+            pps.delimiter, pps.delimiters, pps.delimiterLazyShow
+        );
 
         owner.updateValueState();
     },
@@ -292,19 +330,47 @@ Cleave.prototype = {
     },
 
     updateValueState: function () {
-        var owner = this;
+        var owner = this,
+            Util = Cleave.Util,
+            pps = owner.properties;
+
+        if (!owner.element) {
+            return;
+        }
+
+        var endPos = owner.element.selectionEnd;
+        var oldValue = owner.element.value;
+        var newValue = pps.result;
+
+        endPos = Util.getNextCursorPosition(endPos, oldValue, newValue, pps.delimiter, pps.delimiters);
 
         // fix Android browser type="text" input field
         // cursor not jumping issue
         if (owner.isAndroid) {
             window.setTimeout(function () {
-                owner.element.value = owner.properties.result;
+                owner.element.value = newValue;
+                Util.setSelection(owner.element, endPos, pps.document, false);
+                owner.callOnValueChanged();
             }, 1);
 
             return;
         }
 
-        owner.element.value = owner.properties.result;
+        owner.element.value = newValue;
+        Util.setSelection(owner.element, endPos, pps.document, false);
+        owner.callOnValueChanged();
+    },
+
+    callOnValueChanged: function () {
+        var owner = this,
+            pps = owner.properties;
+
+        pps.onValueChanged.call(owner, {
+            target: {
+                value: pps.result,
+                rawValue: owner.getRawValue()
+            }
+        });
     },
 
     setPhoneRegionCode: function (phoneRegionCode) {
@@ -324,6 +390,8 @@ Cleave.prototype = {
             value = value.replace('.', pps.numeralDecimalMark);
         }
 
+        pps.backspace = false;
+
         owner.element.value = value;
         owner.onInput(value);
     },
@@ -335,7 +403,7 @@ Cleave.prototype = {
             rawValue = owner.element.value;
 
         if (pps.rawValueTrimPrefix) {
-            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength);
+            rawValue = Util.getPrefixStrippedValue(rawValue, pps.prefix, pps.prefixLength, pps.result);
         }
         if (pps.rawValueTrimPostfix) {
             rawValue = Util.getPostfixStrippedValue(rawValue, pps.postfix, pps.postfixLength);
@@ -350,6 +418,13 @@ Cleave.prototype = {
         return rawValue;
     },
 
+    getISOFormatDate: function () {
+        var owner = this,
+            pps = owner.properties;
+
+        return pps.date ? pps.dateFormatter.getISOFormatDate() : '';
+    },
+
     getFormattedValue: function () {
         return this.element.value;
     },
@@ -359,6 +434,7 @@ Cleave.prototype = {
 
         owner.element.removeEventListener('input', owner.onChangeListener);
         owner.element.removeEventListener('keydown', owner.onKeyDownListener);
+        owner.element.removeEventListener('focus', owner.onFocusListener);
         owner.element.removeEventListener('cut', owner.onCutListener);
         owner.element.removeEventListener('copy', owner.onCopyListener);
     },
@@ -368,12 +444,13 @@ Cleave.prototype = {
     }
 };
 
-Cleave.NumeralFormatter = require('./shortcuts/NumeralFormatter');
-Cleave.DateFormatter = require('./shortcuts/DateFormatter');
-Cleave.PhoneFormatter = require('./shortcuts/PhoneFormatter');
-Cleave.CreditCardDetector = require('./shortcuts/CreditCardDetector');
-Cleave.Util = require('./utils/Util');
-Cleave.DefaultProperties = require('./common/DefaultProperties');
+Cleave.NumeralFormatter = require('../src/shortcuts/NumeralFormatter');
+Cleave.DateFormatter = require('../src/shortcuts/DateFormatter');
+Cleave.TimeFormatter = require('../src/shortcuts/TimeFormatter');
+Cleave.PhoneFormatter = require('../src/shortcuts/PhoneFormatter');
+Cleave.CreditCardDetector = require('../src/shortcuts/CreditCardDetector');
+Cleave.Util = require('../src/utils/Util');
+Cleave.DefaultProperties = require('../src/common/DefaultProperties');
 
 // for angular directive
 ((typeof global === 'object' && global) ? global : window)['Cleave'] = Cleave;

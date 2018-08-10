@@ -1,7 +1,7 @@
 # Cleave.js
 
 [![Travis](https://img.shields.io/travis/nosir/cleave.js.svg?maxAge=2592000)](https://travis-ci.org/nosir/cleave.js)
-[![Codacy branch grade](https://img.shields.io/codacy/grade/b1c0b0da42fa418f887076a3f7352aea/master.svg?maxAge=2592000)](https://www.codacy.com/app/nosir/cleave-js)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b1c0b0da42fa418f887076a3f7352aea)](https://www.codacy.com/app/nosir/cleave-js?utm_source=github.com&utm_medium=referral&utm_content=nosir/cleave.js&utm_campaign=badger)
 [![npm version](https://badge.fury.io/js/cleave.js.svg)](https://badge.fury.io/js/cleave.js)
 [![npm downloads](https://img.shields.io/npm/dm/cleave.js.svg)](https://www.npmjs.com/package/cleave.js)
 [![Documents](https://img.shields.io/badge/documents-check-3362c2.svg)](https://github.com/nosir/cleave.js/blob/master/doc/doc.md)
@@ -58,7 +58,7 @@ Then have a text field
 Now in your JavaScript
 
 ```js
-var cleave = new Cleave('.input-element', {
+var cleave = new Cleave('.input-phone', {
     phone: true,
     phoneRegionCode: '{country}'
 });
@@ -82,6 +82,20 @@ var cleave = new Cleave(...)
 require(['cleave.js/dist/cleave.min', 'cleave.js/dist/addons/cleave-phone.{country}'], function (Cleave) {
     var cleave = new Cleave(...)
 });
+```
+
+#### TypeScript
+
+Types are contributed by the community and are available via `npm install --save-dev @types/cleave.js`. Once installed, you can import Cleave like the following:
+
+```ts
+import Cleave = require('cleave.js');
+```
+
+Types for the React-component are also available and can be imported in the same way.
+
+```ts
+import Cleave = require('cleave.js/react');
 ```
 
 ## ReactJS component usage
@@ -136,8 +150,10 @@ As you can see, here you simply use `<Cleave/>` as a normal `<input/>` field
 Advanced usage:
 
 - [How to pass default value](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md#how-to-pass-default-value)
-- [How to call to update raw value](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md#how-to-update-raw-value)
+- [How to get ref of cleave instance and call methods](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md#how-to-call-public-methods)
+- [How to update raw value](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md#how-to-update-raw-value)
 - [How to get ref of the input field](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md#how-to-get-ref-of-the-input-field)
+- [How to use it with redux form](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md#how-to-use-it-with-redux-form)
 
 Usage for `Webpack`, `Browserify` and more in documentation: [ReactJS component usage](https://github.com/nosir/cleave.js/blob/master/doc/reactjs-component-usage.md)
 

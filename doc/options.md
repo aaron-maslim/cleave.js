@@ -1,4 +1,4 @@
-# Cleave.js Documentation 
+# Cleave.js Documentation
 
 [Documentation](https://github.com/nosir/cleave.js/blob/master/doc/doc.md) > [JavaScript API](https://github.com/nosir/cleave.js/blob/master/doc/js-api.md) > Options
 
@@ -12,6 +12,9 @@
 - Date:
     - [date](#date)
     - [datePattern](#datepattern)
+- Time:
+    - [time](#time)
+    - [timePattern](#timepattern)
 - Numerals:
     - [numeral](#numeral)
     - [numeralThousandsGroupStyle](#numeralthousandsgroupstyle)
@@ -19,15 +22,19 @@
     - [numeralDecimalScale](#numeraldecimalscale)
     - [numeralDecimalMark](#numeraldecimalmark)
     - [numeralPositiveOnly](#numeralpositiveonly)
+    - [stripLeadingZeroes](#stripleadingzeroes)
 - General config:
     - [blocks](#blocks)
     - [delimiter](#delimiter)
     - [delimiters](#delimiters)
+    - [delimiterLazyShow](#delimiterlazyshow)
     - [prefix](#prefix)
+    - [noImmediatePrefix](#noimmediateprefix)
     - [rawValueTrimPrefix](#rawvaluetrimprefix)
     - [numericOnly](#numericonly)
     - [uppercase](#uppercase)
     - [lowercase](#lowercase)
+    - [onValueChanged](#onvaluechanged)
 
 ## Credit card numbers
 
@@ -60,7 +67,7 @@ You can also custom the [delimiter](#delimiter) for credit card numbers
 
 A `Boolean` value indicates if enable credit card strict mode.
 
-Expand use of 19-digit PANs for visa credit card.
+Expand use of 19-digit PANs for supported credit card.
 
 **Default value**: `false`
 
@@ -72,7 +79,7 @@ new Cleave('.my-input', {
 ```
 
 ```js
-// Visa: XXXX XXXX XXXX XXXXXXX
+// XXXX XXXX XXXX XXXXXXX
 ...
 ```
 
@@ -82,7 +89,7 @@ A callback `Function`. Triggered after credit card type changes.
 
 The unique `String` argument `type` is the type of the detected credit, which can be:
 
-`amex` `mastercard` `visa` `diners` `discover` `jcb` `dankort` `instapayment` `uatp`
+`amex` `mastercard` `visa` `diners` `discover` `jcb` `dankort` `instapayment` `uatp` `mir` `unionPay`
 
 ```js
 new Cleave('.my-input', {
@@ -124,7 +131,7 @@ new Cleave('.my-input', {
 // 202 XXX XXXX
 ```
 
-You can also custom the [delimiter](#delimiter) for phone numbers
+You can also custom the [delimiter](#delimiter) and the [prefix](#prefix) for phone numbers
 
 ## Date
 
@@ -157,6 +164,37 @@ new Cleave('.my-input', {
 
 You can also custom the [delimiter](#delimiter) for date
 
+## Time
+
+### `time`
+
+A `Boolean` value indicates if this is a time input field. Enable to trigger time shortcut mode.
+
+**Default value**: `false`
+
+### `timePattern`
+
+An `Array` value indicates the time pattern.
+
+Since it's an input field, leading `0` before hour, minute and second is required. To indicate what patterns it should apply, you can use: 'h', 'm' and 's'.
+
+**Default value**: `['h', 'm', 's']`
+
+```js
+new Cleave('.my-input', {
+    time: true,
+    timePattern: ['h', 'm']
+});
+```
+
+```js
+['h', 'm', 's']: 14:56:37
+['h', 'm']: 21:56
+['s', 'm', 'h']: 37:56:14
+```
+
+You can also custom the [delimiter](#delimiter) for time
+
 ## Numerals
 
 ### `numeral`
@@ -184,6 +222,7 @@ It accepts three preset value:
 - `thousand`: Thousand numbering group style. It groups numbers in thousands and the delimiter occurs every 3 digits. `1,234,567.89`
 - `lakh`: Indian numbering group style. It groups the rightmost 3 digits in a similar manner to regular way but then groups every 2 digits thereafter. `12,34,567.89`
 - `wan`: Chinese numbering group style. It groups numbers in 10-thousand(万, 萬) and the delimiter occurs every 4 digits. `123,4567.89`
+- `none`: Does not group thousands. `1234567.89`
 
 **Default value**: `thousand`
 
@@ -267,6 +306,22 @@ new Cleave('.my-input', {
 // 1234.56
 ```
 
+### `stripLeadingZeroes`
+
+A `Boolean` value indicates if zeroes appearing at the beginning of the number should be stripped out. This also prevents a number like "100,000" to disappear if the leading "1" is deleted.
+
+**Default value**: `true`
+
+```js
+new Cleave('.my-input', {
+    numeral: true,
+    stripLeadingZeroes: false
+});
+```
+
+```js
+// 000,0134.56
+```
 You can also custom the [prefix](#prefix) for numeral
 
 ## General config
@@ -319,12 +374,33 @@ When delimiters array is defined, single [delimiter](#delimiter) option is ignor
 ```js
 new Cleave('.my-input', {
     blocks: [3, 3, 3, 2],
-    delimiters: ['.', '.', '-'] 
+    delimiters: ['.', '.', '-']
 });
 ```
 
 ```js
 // XXX.XXX.XXX-XX
+```
+
+### `delimiterlazyshow`
+
+A `boolean` value that if true, will lazy add the delimiter only when the user starting typing the next group section
+
+This option is ignored by `phone`, and `numeral` shortcuts mode.
+
+**Default value**: `false`
+
+```js
+new Cleave('.my-input', {
+    blocks: [3, 3, 3],
+    delimiter: '-',
+    delimiterLazyShow: true
+});
+```
+
+```js
+// XXX
+// XXX-X
 ```
 
 ### `prefix`
@@ -342,6 +418,27 @@ new Cleave('.my-input', {
 
 ```js
 // 253874 XXX XXX
+```
+
+### `noImmediatePrefix`
+
+A `boolean` value that if true, will only add the prefix once the user enters values. Useful if you need to use placeholders.
+
+**Default value**: `false`
+
+```js
+new Cleave('.my-input', {
+    numeral: true,
+    prefix: '$',
+    noImmediatePrefix: true
+});
+```
+
+```js
+// before input
+//
+// after input of 5
+// $5
 ```
 
 ### `rawValueTrimPrefix`
@@ -369,11 +466,15 @@ A `Boolean` value indicates if it only allows numeric letters (0-9).
 
 Ignored by `creditCard` and `date` shortcuts mode, the value will always be `true`.
 
+`numericOnly` doesn't work on it's own, you have to either specify the shortcuts mode or `blocks` option to enable the formatter.
+
 **Default value**: `false`
 
 ### `uppercase`
 
 A `Boolean` value indicates if it converts value to uppercase letters.
+
+`uppercase` doesn't work on it's own, you have to either specify the shortcuts mode or `blocks` option to enable the formatter.
 
 **Default value**: `false`
 
@@ -381,4 +482,21 @@ A `Boolean` value indicates if it converts value to uppercase letters.
 
 A `Boolean` value indicates if it converts value to lowercase letters.
 
+`lowercase` doesn't work on it's own, you have to either specify the shortcuts mode or `blocks` option to enable the formatter.
+
 **Default value**: `false`
+
+### `onValueChanged`
+
+A callback `Function`. Triggered after value changes.
+
+It returns an object, which has a target key, value is the formatted and raw input value.
+
+```js
+new Cleave('.my-input', {
+    creditCard: true,
+    onValueChanged: function (e) {
+        // e.target = { value: '5000-1234', rawValue: '51001234' }
+    }
+});
+```

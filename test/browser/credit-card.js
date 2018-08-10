@@ -82,6 +82,11 @@ describe('Credit card type change', function () {
 
     it('should identify jcb', function () {
         cleave.setRawValue('2131');
+        assert.equal(cardType, 'jcb15');
+    });
+
+    it('should identify jcb', function () {
+        cleave.setRawValue('35');
         assert.equal(cardType, 'jcb');
     });
 
@@ -94,5 +99,14 @@ describe('Credit card type change', function () {
         cleave.setRawValue('400');
         assert.equal(cardType, 'visa');
     });
-});
 
+    it('should identify mir', function () {
+        cleave.setRawValue('2204');
+        assert.equal(cardType, 'mir');
+    });
+
+    it('should identify unionPay', function () {
+        cleave.setRawValue('6288');
+        assert.equal(cardType, 'unionPay');
+    });
+});
